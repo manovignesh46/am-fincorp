@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Member } from '../../types';
 
-const MemberForm = ({ onSubmit, initialData = null, isLoading = false }) => {
-  const [formData, setFormData] = useState({
+interface MemberFormData {
+  name: string;
+  contact: string;
+  email: string;
+  address: string;
+}
+
+interface MemberFormProps {
+  onSubmit: (data: MemberFormData) => void;
+  initialData?: Member | null;
+  isLoading?: boolean;
+}
+
+const MemberForm = ({ onSubmit, initialData = null, isLoading = false }: MemberFormProps) => {
+  const [formData, setFormData] = useState<MemberFormData>({
     name: initialData?.name || '',
     contact: initialData?.contact || '',
     email: initialData?.email || '',
     address: initialData?.address || '',
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };

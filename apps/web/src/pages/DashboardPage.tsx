@@ -1,18 +1,26 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Users, 
-  BadgeDollarSign, 
-  Coins, 
+import {
+  Users,
+  BadgeDollarSign,
+  Coins,
   ArrowLeftRight,
   TrendingUp,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
+import { cn } from '../utils/cn';
 
-const StatCard = ({ title, value, icon: Icon, color }) => (
+interface StatCardProps {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+const StatCard = ({ title, value, icon: Icon, color }: StatCardProps) => (
   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
     <div className="flex items-center justify-between mb-4">
-      <div className={cn("p-3 rounded-xl", color)}>
+      <div className={cn('p-3 rounded-xl', color)}>
         <Icon size={24} className="text-white" />
       </div>
       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Growth +12%</span>
@@ -21,9 +29,6 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
     <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
   </div>
 );
-
-// We need cn for the StatCard color classes
-import { cn } from '../utils/cn';
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -36,29 +41,29 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Active Loans" 
-          value="₹ 12,45,000" 
-          icon={BadgeDollarSign} 
-          color="bg-emerald-500" 
+        <StatCard
+          title="Active Loans"
+          value="₹ 12,45,000"
+          icon={BadgeDollarSign}
+          color="bg-emerald-500"
         />
-        <StatCard 
-          title="Total Members" 
-          value="142" 
-          icon={Users} 
-          color="bg-indigo-500" 
+        <StatCard
+          title="Total Members"
+          value="142"
+          icon={Users}
+          color="bg-indigo-500"
         />
-        <StatCard 
-          title="Chit Fund Capital" 
-          value="₹ 50,00,000" 
-          icon={Coins} 
-          color="bg-amber-500" 
+        <StatCard
+          title="Chit Fund Capital"
+          value="₹ 50,00,000"
+          icon={Coins}
+          color="bg-amber-500"
         />
-        <StatCard 
-          title="Total Cash in Hand" 
-          value="₹ 2,15,400" 
-          icon={CreditCard} 
-          color="bg-rose-500" 
+        <StatCard
+          title="Total Cash in Hand"
+          value="₹ 2,15,400"
+          icon={CreditCard}
+          color="bg-rose-500"
         />
       </div>
 

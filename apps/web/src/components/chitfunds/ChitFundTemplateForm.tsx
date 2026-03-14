@@ -1,21 +1,36 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { ChitFundTemplate } from '../../types';
 
-const ChitFundTemplateForm = ({ onSubmit, initialData = null, isLoading = false }) => {
-  const [formData, setFormData] = useState({
+interface ChitFundTemplateFormData {
+  name: string;
+  totalAmount: string;
+  monthlyContribution: string;
+  durationMonths: string;
+  description: string;
+}
+
+interface ChitFundTemplateFormProps {
+  onSubmit: (data: Record<string, unknown>) => void;
+  initialData?: ChitFundTemplate | null;
+  isLoading?: boolean;
+}
+
+const ChitFundTemplateForm = ({ onSubmit, initialData = null, isLoading = false }: ChitFundTemplateFormProps) => {
+  const [formData, setFormData] = useState<ChitFundTemplateFormData>({
     name: initialData?.name || '',
-    totalAmount: initialData?.totalAmount || '',
-    monthlyContribution: initialData?.monthlyContribution || '',
-    durationMonths: initialData?.durationMonths || '',
+    totalAmount: initialData?.totalAmount ? String(initialData.totalAmount) : '',
+    monthlyContribution: initialData?.monthlyContribution ? String(initialData.monthlyContribution) : '',
+    durationMonths: initialData?.durationMonths ? String(initialData.durationMonths) : '',
     description: initialData?.description || '',
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       ...formData,

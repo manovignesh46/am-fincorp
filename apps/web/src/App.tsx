@@ -13,10 +13,14 @@ import ChitFundDetailPage from './pages/ChitFundDetailPage';
 import ChitFundTemplateDetailPage from './pages/ChitFundTemplateDetailPage';
 import TransactionDetailPage from './pages/TransactionDetailPage';
 
+interface RouteProps {
+  children: React.ReactNode;
+}
+
 // Protected Route Component
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children }: RouteProps) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -24,25 +28,25 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
-  return children;
+
+  return <>{children}</>;
 };
 
 // Public Route (Accessible only when logged out)
-const PublicRoute = ({ children }) => {
+const PublicRoute = ({ children }: RouteProps) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) return null;
-  
+
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
-  
-  return children;
+
+  return <>{children}</>;
 };
 
 function App() {

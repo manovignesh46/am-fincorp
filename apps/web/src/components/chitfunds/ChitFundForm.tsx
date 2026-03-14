@@ -1,50 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
+import { ChitFund, ChitFundTemplate, ChitFundStatus } from '../../types';
 
-const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'COMPLETED', 'CLOSED'];
+const STATUS_OPTIONS: ChitFundStatus[] = ['ACTIVE', 'INACTIVE', 'COMPLETED', 'CLOSED'];
 
-const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }) => {
-  const [templates, setTemplates] = useState([]);
-  const [formData, setFormData] = useState({
+interface ChitFundFormData {
+  name: string;
+  templateId: string;
+  totalAmount: string;
+  monthlyContribution: string;
+  duration: string;
+  startDate: string;
+  status: ChitFundStatus;
+  currentMonth: string;
+}
+
+interface ChitFundFormProps {
+  onSubmit: (data: Record<string, unknown>) => void;
+  initialData?: ChitFund | null;
+  isLoading?: boolean;
+}
+
+const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitFundFormProps) => {
+  const [templates, setTemplates] = useState<ChitFundTemplate[]>([]);
+  const [formData, setFormData] = useState<ChitFundFormData>({
     name: initialData?.name || '',
-    templateId: initialData?.templateId || '',
-    totalAmount: initialData?.totalAmount || '',
-    monthlyContribution: initialData?.monthlyContribution || '',
-    duration: initialData?.duration || '',
+    templateId: initialData?.templateId ? String(initialData.templateId) : '',
+    totalAmount: initialData?.totalAmount ? String(initialData.totalAmount) : '',
+    monthlyContribution: initialData?.monthlyContribution ? String(initialData.monthlyContribution) : '',
+    duration: initialData?.duration ? String(initialData.duration) : '',
     startDate: initialData?.startDate ? initialData.startDate.slice(0, 10) : '',
     status: initialData?.status || 'ACTIVE',
-    currentMonth: initialData?.currentMonth || 1,
+    currentMonth: initialData?.currentMonth ? String(initialData.currentMonth) : '1',
   });
 
   useEffect(() => {
-    axios.get('/chit-fund-templates').then((res) => setTemplates(res.data.data)).catch(() => {});
+    axios.get<{ data: ChitFundTemplate[] }>('/chit-fund-templates')
+      .then((res) => setTemplates(res.data.data))
+      .catch(() => {});
   }, []);
 
-  const handleTemplateSelect = (e) => {
+  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     if (!id) {
       setFormData((prev) => ({ ...prev, templateId: '' }));
       return;
     }
-    const tpl = templates.find((t) => String(t.id) === String(id));
+    const tpl = templates.find((t) => String(t.id) === id);
     if (tpl) {
       setFormData((prev) => ({
         ...prev,
         templateId: id,
-        totalAmount: tpl.totalAmount,
-        monthlyContribution: tpl.monthlyContribution,
-        duration: tpl.durationMonths,
+        totalAmount: String(tpl.totalAmount),
+        monthlyContribution: String(tpl.monthlyContribution),
+        duration: String(tpl.durationMonths),
       }));
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       ...formData,

@@ -3,60 +3,72 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ArrowLeft, Loader2, AlertCircle, Edit2, Trash2,
-  LayoutTemplate, DollarSign, Calendar, Hash, AlignLeft,
+  User, Phone, Mail, MapPin, StickyNote, Calendar,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
-import ChitFundTemplateForm from '../components/chitfunds/ChitFundTemplateForm';
+import MemberForm from '../components/members/MemberForm';
+import { Member } from '../types';
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+interface InfoRowProps {
+  icon: React.ElementType;
+  label: string;
+  value?: string | null;
+}
 
-const InfoRow = ({ icon: Icon, label, value }) => (
+const InfoRow = ({ icon: Icon, label, value }: InfoRowProps) => (
   <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
     <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
       <Icon size={15} className="text-slate-400" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-      <div className="text-sm font-semibold text-slate-800">{value ?? <span className="italic text-slate-300 font-normal">Not set</span>}</div>
+      <p className="text-sm font-semibold text-slate-800 break-words">
+        {value || <span className="italic text-slate-300 font-normal">Not set</span>}
+      </p>
     </div>
   </div>
 );
 
-const ChitFundTemplateDetailPage = () => {
-  const { id } = useParams();
+const MemberDetailPage = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [template, setTemplate] = useState(null);
+  const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchTemplate = async () => {
+  const fetchMember = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`/chit-fund-templates/${id}`);
-      setTemplate(res.data.data);
+      const res = await axios.get<{ data: Member }>(`/members/${id}`);
+      setMember(res.data.data);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load template.');
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Failed to load member.');
+      } else {
+        setError('Failed to load member.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchTemplate(); }, [id]);
+  useEffect(() => { fetchMember(); }, [id]);
 
-  const handleEdit = async (formData) => {
+  const handleEdit = async (formData: Record<string, unknown>) => {
     try {
       setIsSubmitting(true);
-      const res = await axios.put(`/chit-fund-templates/${id}`, formData);
-      setTemplate(res.data.data);
+      const res = await axios.put<{ data: Member }>(`/members/${id}`, formData);
+      setMember(res.data.data);
       setIsEditModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update template.');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to update member.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -65,10 +77,12 @@ const ChitFundTemplateDetailPage = () => {
   const handleDelete = async () => {
     try {
       setIsSubmitting(true);
-      await axios.delete(`/chit-fund-templates/${id}`);
-      navigate('/chitfund-templates');
+      await axios.delete(`/members/${id}`);
+      navigate('/members');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete template.');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to delete member.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -77,18 +91,18 @@ const ChitFundTemplateDetailPage = () => {
     return (
       <div className="flex items-center justify-center py-32 text-slate-500">
         <Loader2 className="animate-spin mr-3" size={28} />
-        <span className="font-medium">Loading template...</span>
+        <span className="font-medium">Loading member...</span>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !member) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100">
         <AlertCircle size={40} className="mb-3" />
         <p className="font-bold">{error}</p>
-        <button onClick={() => navigate('/chitfund-templates')} className="mt-4 text-sm font-bold text-rose-600 hover:text-rose-800">
-          ← Back to Templates
+        <button onClick={() => navigate('/members')} className="mt-4 text-sm font-bold text-rose-600 hover:text-rose-800">
+          ← Back to Members
         </button>
       </div>
     );
@@ -99,14 +113,14 @@ const ChitFundTemplateDetailPage = () => {
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <button
-          onClick={() => navigate('/chitfund-templates')}
+          onClick={() => navigate('/members')}
           className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1">
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Chit Fund Templates</p>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{template.name}</h1>
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Member Directory</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{member.name}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -127,23 +141,23 @@ const ChitFundTemplateDetailPage = () => {
       {/* Detail card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center gap-4 mb-6 pb-5 border-b border-slate-100">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <LayoutTemplate size={26} />
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-black text-xl">
+            {member.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{template.name}</h2>
-            <p className="text-sm text-slate-400 font-medium">Template ID: #{template.id}</p>
+            <h2 className="text-lg font-bold text-slate-900">{member.name}</h2>
+            <p className="text-sm text-slate-400 font-medium">Member ID: #{member.id}</p>
           </div>
         </div>
 
-        <InfoRow icon={DollarSign} label="Total Amount" value={fmt(template.totalAmount)} />
-        <InfoRow icon={DollarSign} label="Monthly Contribution" value={fmt(template.monthlyContribution)} />
-        <InfoRow icon={Hash} label="Duration" value={`${template.durationMonths} months`} />
-        <InfoRow icon={AlignLeft} label="Description" value={template.description} />
+        <InfoRow icon={Phone} label="Contact" value={member.contact} />
+        <InfoRow icon={Mail} label="Email" value={member.email} />
+        <InfoRow icon={MapPin} label="Address" value={member.address} />
+        <InfoRow icon={StickyNote} label="Notes" value={member.notes} />
         <InfoRow
           icon={Calendar}
-          label="Created On"
-          value={new Date(template.createdAt).toLocaleDateString('en-IN', {
+          label="Registered On"
+          value={new Date(member.createdAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'long', year: 'numeric',
           })}
         />
@@ -153,16 +167,16 @@ const ChitFundTemplateDetailPage = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => !isSubmitting && setIsEditModalOpen(false)}
-        title="Edit Template"
+        title="Update Member Details"
       >
-        <ChitFundTemplateForm onSubmit={handleEdit} isLoading={isSubmitting} initialData={template} />
+        <MemberForm onSubmit={handleEdit} isLoading={isSubmitting} initialData={member} />
       </Modal>
 
       {/* Delete Confirmation */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => !isSubmitting && setIsDeleteModalOpen(false)}
-        title="Delete Template"
+        title="Delete Member"
         maxWidth="max-w-sm"
       >
         <div className="space-y-4 text-center">
@@ -170,8 +184,8 @@ const ChitFundTemplateDetailPage = () => {
             <Trash2 size={32} />
           </div>
           <p className="text-slate-600 text-sm leading-relaxed">
-            Are you sure you want to delete <span className="font-bold text-slate-900">{template.name}</span>?
-            This cannot be undone.
+            Are you sure you want to delete <span className="font-bold text-slate-900">{member.name}</span>?
+            This action cannot be undone.
           </p>
           <div className="flex gap-3 pt-2">
             <button
@@ -195,4 +209,4 @@ const ChitFundTemplateDetailPage = () => {
   );
 };
 
-export default ChitFundTemplateDetailPage;
+export default MemberDetailPage;

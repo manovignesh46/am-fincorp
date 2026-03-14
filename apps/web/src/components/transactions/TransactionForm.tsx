@@ -1,16 +1,35 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { TransactionNature, TransactionCategory } from '../../types';
+
+interface ManualCategory {
+  value: TransactionCategory;
+  label: string;
+}
 
 // Categories allowed for manual entry from the UI
-const MANUAL_CATEGORIES = [
+const MANUAL_CATEGORIES: ManualCategory[] = [
   { value: 'RECORD_AMOUNT', label: 'Record Amount (Cash)' },
   { value: 'DOCUMENT_CHARGE', label: 'Document Charge' },
   { value: 'PARTNER_TO_PARTNER', label: 'Partner to Partner Transfer' },
 ];
 
-const TransactionForm = ({ onSubmit, isLoading = false }) => {
+interface TransactionFormData {
+  nature: TransactionNature;
+  category: TransactionCategory;
+  amount: string;
+  date: string;
+  note: string;
+}
+
+interface TransactionFormProps {
+  onSubmit: (data: Record<string, unknown>) => void;
+  isLoading?: boolean;
+}
+
+const TransactionForm = ({ onSubmit, isLoading = false }: TransactionFormProps) => {
   const today = new Date().toISOString().slice(0, 10);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TransactionFormData>({
     nature: 'CREDIT',
     category: 'RECORD_AMOUNT',
     amount: '',
@@ -18,12 +37,12 @@ const TransactionForm = ({ onSubmit, isLoading = false }) => {
     note: '',
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({ ...formData, amount: parseFloat(formData.amount) });
   };
@@ -38,7 +57,7 @@ const TransactionForm = ({ onSubmit, isLoading = false }) => {
       <div className="space-y-1.5">
         <label className={labelClass}>Nature</label>
         <div className="grid grid-cols-2 gap-2">
-          {['CREDIT', 'DEBIT'].map((n) => (
+          {(['CREDIT', 'DEBIT'] as TransactionNature[]).map((n) => (
             <label
               key={n}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 cursor-pointer font-bold text-sm transition-all ${

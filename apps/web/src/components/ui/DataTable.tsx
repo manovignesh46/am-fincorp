@@ -1,16 +1,26 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-/**
- * A generic, reusable data table component.
- * @param {Array} columns - Array of column objects { header: string, accessor: string | function }
- * @param {Array} data - Array of data objects to display
- * @param {string} className - Additional CSS classes for the table container
- * @param {function} onRowClick - Optional click handler for rows
- */
-const DataTable = ({ columns, data, className, onRowClick }) => {
+export interface Column<T = Record<string, unknown>> {
+  header: string;
+  accessor: ((row: T) => React.ReactNode) | string;
+}
+
+interface DataTableProps<T = Record<string, unknown>> {
+  columns: Column<T>[];
+  data: T[];
+  className?: string;
+  onRowClick?: (row: T) => void;
+}
+
+const DataTable = <T = Record<string, unknown>>({
+  columns,
+  data,
+  className,
+  onRowClick,
+}: DataTableProps<T>) => {
   return (
-    <div className={cn("overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm", className)}>
+    <div className={cn('overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm', className)}>
       <table className="w-full text-left text-sm text-slate-600">
         <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
           <tr>
@@ -24,19 +34,19 @@ const DataTable = ({ columns, data, className, onRowClick }) => {
         <tbody className="divide-y divide-slate-100">
           {data.length > 0 ? (
             data.map((row, rowIndex) => (
-              <tr 
-                key={rowIndex} 
+              <tr
+                key={rowIndex}
                 onClick={() => onRowClick && onRowClick(row)}
                 className={cn(
-                  "hover:bg-slate-50 transition-colors",
-                  onRowClick && "cursor-pointer"
+                  'hover:bg-slate-50 transition-colors',
+                  onRowClick && 'cursor-pointer'
                 )}
               >
                 {columns.map((column, colIndex) => (
                   <td key={colIndex} className="px-6 py-4">
-                    {typeof column.accessor === 'function' 
-                      ? column.accessor(row) 
-                      : row[column.accessor]}
+                    {typeof column.accessor === 'function'
+                      ? column.accessor(row)
+                      : (row as Record<string, unknown>)[column.accessor] as React.ReactNode}
                   </td>
                 ))}
               </tr>

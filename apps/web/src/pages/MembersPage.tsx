@@ -1,28 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { UserPlus, Search, AlertCircle, Loader2, Edit2, Trash2, Eye } from 'lucide-react';
+import { UserPlus, Search, AlertCircle, Loader2, Edit2, Trash2 } from 'lucide-react';
 import DataTable from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
 import MemberForm from '../components/members/MemberForm';
+import { Member } from '../types';
+import { Column } from '../components/ui/DataTable';
 
 const MembersPage = () => {
   const navigate = useNavigate();
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/members');
+      const response = await axios.get<{ data: Member[] }>('/members');
       setMembers(response.data.data);
       setError(null);
     } catch (err) {
@@ -42,31 +44,31 @@ const MembersPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (member) => {
+  const handleOpenEditModal = (member: Member) => {
     setSelectedMember(member);
     setIsModalOpen(true);
   };
 
-  const handleOpenDeleteModal = (member) => {
+  const handleOpenDeleteModal = (member: Member) => {
     setSelectedMember(member);
     setIsDeleteModalOpen(true);
   };
 
-  const handleAddOrEditMember = async (formData) => {
+  const handleAddOrEditMember = async (formData: Record<string, unknown>) => {
     try {
       setIsSubmitting(true);
       if (selectedMember) {
-        // UPDATE
         await axios.put(`/members/${selectedMember.id}`, formData);
       } else {
-        // CREATE
         await axios.post('/members', formData);
       }
-      await fetchMembers(); // Refresh list
-      setIsModalOpen(false); // Close modal
+      await fetchMembers();
+      setIsModalOpen(false);
     } catch (err) {
       console.error('Error saving member:', err);
-      alert(err.response?.data?.message || 'Failed to save member');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to save member');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -77,40 +79,51 @@ const MembersPage = () => {
     try {
       setIsSubmitting(true);
       await axios.delete(`/members/${selectedMember.id}`);
-      await fetchMembers(); // Refresh list
-      setIsDeleteModalOpen(false); // Close modal
+      await fetchMembers();
+      setIsDeleteModalOpen(false);
     } catch (err) {
       console.error('Error deleting member:', err);
-      alert(err.response?.data?.message || 'Failed to delete member');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to delete member');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const columns = [
-    { header: 'Name', accessor: (row) => (
-      <div className="flex flex-col">
-        <span className="font-bold text-slate-900">{row.name}</span>
-        <span className="text-[10px] text-slate-400 uppercase tracking-tight">ID: {String(row.id).substring(0, 8)}</span>
-      </div>
-    )},
+  const columns: Column<Member>[] = [
+    {
+      header: 'Name',
+      accessor: (row) => (
+        <div className="flex flex-col">
+          <span className="font-bold text-slate-900">{row.name}</span>
+          <span className="text-[10px] text-slate-400 uppercase tracking-tight">ID: {String(row.id).substring(0, 8)}</span>
+        </div>
+      ),
+    },
     { header: 'Contact', accessor: 'contact' },
     { header: 'Email', accessor: (row) => row.email || <span className="text-slate-300 italic">Not set</span> },
-    { header: 'Address', accessor: (row) => row.address ? (
-      <span className="truncate max-w-[180px] block text-xs text-slate-500">{row.address}</span>
-    ) : '-' },
+    {
+      header: 'Address',
+      accessor: (row) =>
+        row.address ? (
+          <span className="truncate max-w-[180px] block text-xs text-slate-500">{row.address}</span>
+        ) : (
+          '-'
+        ),
+    },
     {
       header: 'Actions',
       accessor: (row) => (
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }}
             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             title="Edit Member"
           >
             <Edit2 size={16} />
           </button>
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }}
             className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
             title="Delete Member"
@@ -118,13 +131,14 @@ const MembersPage = () => {
             <Trash2 size={16} />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  const filteredMembers = members.filter(member => 
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.contact.includes(searchTerm)
+  const filteredMembers = members.filter(
+    (member) =>
+      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.contact.includes(searchTerm)
   );
 
   return (
@@ -134,10 +148,7 @@ const MembersPage = () => {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Member Directory</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Create, update, and manage all participants.</p>
         </div>
-        <button 
-          onClick={handleOpenAddModal}
-          className="flex items-center gap-2 btn-primary"
-        >
+        <button onClick={handleOpenAddModal} className="flex items-center gap-2 btn-primary">
           <UserPlus size={18} />
           <span>Add Member</span>
         </button>
@@ -145,9 +156,9 @@ const MembersPage = () => {
 
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3 group focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
         <Search className="text-slate-400" size={20} />
-        <input 
-          type="text" 
-          placeholder="Search by name or contact..." 
+        <input
+          type="text"
+          placeholder="Search by name or contact..."
           className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -163,7 +174,7 @@ const MembersPage = () => {
         <div className="flex flex-col items-center justify-center py-20 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100 italic">
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
-          <button 
+          <button
             onClick={() => fetchMembers()}
             className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
           >
@@ -182,16 +193,12 @@ const MembersPage = () => {
       )}
 
       {/* Add/Edit Member Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => !isSubmitting && setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => !isSubmitting && setIsModalOpen(false)}
         title={selectedMember ? 'Update Member Details' : 'Register New Member'}
       >
-        <MemberForm 
-          onSubmit={handleAddOrEditMember} 
-          isLoading={isSubmitting} 
-          initialData={selectedMember} 
-        />
+        <MemberForm onSubmit={handleAddOrEditMember} isLoading={isSubmitting} initialData={selectedMember} />
       </Modal>
 
       {/* Delete Confirmation Modal */}
@@ -206,8 +213,8 @@ const MembersPage = () => {
             <Trash2 size={32} />
           </div>
           <p className="text-slate-600 text-sm leading-relaxed">
-            Are you sure you want to delete <span className="font-bold text-slate-900">{selectedMember?.name}</span>? 
-            This action cannot be undone.
+            Are you sure you want to delete{' '}
+            <span className="font-bold text-slate-900">{selectedMember?.name}</span>? This action cannot be undone.
           </p>
           <div className="flex gap-3 pt-2">
             <button

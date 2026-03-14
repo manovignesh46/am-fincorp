@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeftRight, AlertCircle, Loader2, Plus, TrendingUp, TrendingDown, Scale } from 'lucide-react';
-import DataTable from '../components/ui/DataTable';
+import { AlertCircle, Loader2, Plus, TrendingUp, TrendingDown, Scale } from 'lucide-react';
+import DataTable, { Column } from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
 import TransactionForm from '../components/transactions/TransactionForm';
+import { Transaction, TransactionNature, TransactionCategory, TransactionSummary } from '../types';
 
-const fmt = (n) =>
+const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
-const NATURE_STYLES = {
+const NATURE_STYLES: Record<TransactionNature, string> = {
   CREDIT: 'bg-emerald-50 text-emerald-700',
   DEBIT: 'bg-rose-50 text-rose-600',
 };
 
-const CATEGORY_LABELS = {
+const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   PARTNER_TO_PARTNER: 'P2P Transfer',
   RECORD_AMOUNT: 'Record Amount',
   LOAN_DISBURSEMENT: 'Loan Disbursement',
@@ -25,9 +26,16 @@ const CATEGORY_LABELS = {
   REVERSAL: 'Reversal',
 };
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS);
+const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[];
 
-const SummaryCard = ({ label, value, icon: Icon, colorClass }) => (
+interface SummaryCardProps {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  colorClass: string;
+}
+
+const SummaryCard = ({ label, value, icon: Icon, colorClass }: SummaryCardProps) => (
   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorClass}`}>
       <Icon size={22} />
@@ -41,12 +49,11 @@ const SummaryCard = ({ label, value, icon: Icon, colorClass }) => (
 
 const TransactionsPage = () => {
   const navigate = useNavigate();
-  const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState({ totalCredits: 0, totalDebits: 0, netBalance: 0 });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<TransactionSummary>({ totalCredits: 0, totalDebits: 0, netBalance: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [filterNature, setFilterNature] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
@@ -56,13 +63,13 @@ const TransactionsPage = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const params = {};
+      const params: Record<string, string> = {};
       if (filterNature) params.nature = filterNature;
       if (filterCategory) params.category = filterCategory;
 
       const [txRes, sumRes] = await Promise.all([
-        axios.get('/transactions', { params }),
-        axios.get('/transactions/summary'),
+        axios.get<{ data: Transaction[] }>('/transactions', { params }),
+        axios.get<{ data: TransactionSummary }>('/transactions/summary'),
       ]);
 
       setTransactions(txRes.data.data);
@@ -80,20 +87,22 @@ const TransactionsPage = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleRecord = async (formData) => {
+  const handleRecord = async (formData: Record<string, unknown>) => {
     try {
       setIsSubmitting(true);
       await axios.post('/transactions', formData);
       await fetchData();
       setIsModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to record transaction');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to record transaction');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const columns = [
+  const columns: Column<Transaction>[] = [
     {
       header: 'Date',
       accessor: (row) =>
@@ -217,7 +226,10 @@ const TransactionsPage = () => {
         <div className="flex flex-col items-center justify-center py-20 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100 italic">
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
-          <button onClick={fetchData} className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800">
+          <button
+            onClick={fetchData}
+            className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
+          >
             Refresh
           </button>
         </div>

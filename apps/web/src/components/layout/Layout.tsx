@@ -1,31 +1,36 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BadgeDollarSign, 
-  Coins, 
+import {
+  LayoutDashboard,
+  Users,
+  BadgeDollarSign,
+  Coins,
   LayoutTemplate,
-  ArrowLeftRight, 
+  ArrowLeftRight,
   LogOut,
   UserCircle,
   Bell,
   Search,
-  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
 
-const MenuItem = ({ to, icon: Icon, label }) => (
+interface MenuItemProps {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}
+
+const MenuItem = ({ to, icon: Icon, label }: MenuItemProps) => (
   <NavLink to={to}>
     {({ isActive }) => (
       <div className={cn(
-        "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm",
-        isActive 
-          ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-blue-100 shadow-sm" 
-          : "text-[var(--color-text-muted)] hover:bg-slate-100 hover:text-[var(--color-text-main)]"
+        'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm',
+        isActive
+          ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-blue-100 shadow-sm'
+          : 'text-[var(--color-text-muted)] hover:bg-slate-100 hover:text-[var(--color-text-main)]'
       )}>
-        <Icon size={18} className={cn("transition-colors", isActive ? "text-[var(--color-primary)]" : "text-slate-400 group-hover:text-slate-600")} />
+        <Icon size={18} className={cn('transition-colors', isActive ? 'text-[var(--color-primary)]' : 'text-slate-400 group-hover:text-slate-600')} />
         <span className="flex-1">{label}</span>
       </div>
     )}
@@ -80,7 +85,7 @@ const Layout = () => {
               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider truncate">{user?.role?.replace('_', ' ')}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-all text-xs font-bold"
           >
@@ -98,13 +103,13 @@ const Layout = () => {
           <div className="flex items-center gap-4">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                placeholder="Search..."
                 className="bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-9 pr-4 w-48 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:bg-white transition-all outline-none text-xs font-medium"
               />
             </div>
-            
+
             <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors relative">
               <Bell size={18} />
               <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>

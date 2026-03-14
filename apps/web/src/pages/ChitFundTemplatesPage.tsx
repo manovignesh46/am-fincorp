@@ -1,105 +1,103 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Coins, Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
-import DataTable from '../components/ui/DataTable';
+import { Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
+import DataTable, { Column } from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
-import ChitFundForm from '../components/chitfunds/ChitFundForm';
+import ChitFundTemplateForm from '../components/chitfunds/ChitFundTemplateForm';
+import { ChitFundTemplate } from '../types';
 
-const fmt = (n) =>
+const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
-const STATUS_STYLES = {
-  ACTIVE:    'bg-emerald-50 text-emerald-700',
-  INACTIVE:  'bg-slate-100 text-slate-500',
-  COMPLETED: 'bg-blue-50 text-blue-700',
-  CLOSED:    'bg-rose-50 text-rose-600',
-};
-
-const ChitFundsPage = () => {
+const ChitFundTemplatesPage = () => {
   const navigate = useNavigate();
-  const [chitFunds, setChitFunds] = useState([]);
+  const [templates, setTemplates] = useState<ChitFundTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFund, setSelectedFund] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ChitFundTemplate | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchChitFunds = async () => {
+  const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/chit-funds');
-      setChitFunds(res.data.data);
+      const res = await axios.get<{ data: ChitFundTemplate[] }>('/chit-fund-templates');
+      setTemplates(res.data.data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching chit funds:', err);
-      setError('Failed to load chit funds. Please try again.');
+      console.error('Error fetching templates:', err);
+      setError('Failed to load templates. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchChitFunds();
+    fetchTemplates();
   }, []);
 
   const handleOpenAddModal = () => {
-    setSelectedFund(null);
+    setSelectedTemplate(null);
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (fund) => {
-    setSelectedFund(fund);
+  const handleOpenEditModal = (template: ChitFundTemplate) => {
+    setSelectedTemplate(template);
     setIsModalOpen(true);
   };
 
-  const handleOpenDeleteModal = (fund) => {
-    setSelectedFund(fund);
+  const handleOpenDeleteModal = (template: ChitFundTemplate) => {
+    setSelectedTemplate(template);
     setIsDeleteModalOpen(true);
   };
 
-  const handleAddOrEdit = async (formData) => {
+  const handleAddOrEdit = async (formData: Record<string, unknown>) => {
     try {
       setIsSubmitting(true);
-      if (selectedFund) {
-        await axios.put(`/chit-funds/${selectedFund.id}`, formData);
+      if (selectedTemplate) {
+        await axios.put(`/chit-fund-templates/${selectedTemplate.id}`, formData);
       } else {
-        await axios.post('/chit-funds', formData);
+        await axios.post('/chit-fund-templates', formData);
       }
-      await fetchChitFunds();
+      await fetchTemplates();
       setIsModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save chit fund');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to save template');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedFund) return;
+    if (!selectedTemplate) return;
     try {
       setIsSubmitting(true);
-      await axios.delete(`/chit-funds/${selectedFund.id}`);
-      await fetchChitFunds();
+      await axios.delete(`/chit-fund-templates/${selectedTemplate.id}`);
+      await fetchTemplates();
       setIsDeleteModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete chit fund');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to delete template');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const columns = [
+  const columns: Column<ChitFundTemplate>[] = [
     {
-      header: 'Fund Name',
+      header: 'Name',
       accessor: (row) => (
         <div className="flex flex-col">
           <span className="font-bold text-slate-900">{row.name}</span>
-          {row.ChitFundTemplate && (
-            <span className="text-[11px] text-slate-400">Template: {row.ChitFundTemplate.name}</span>
+          {row.description && (
+            <span className="text-[11px] text-slate-400 truncate max-w-[200px]">{row.description}</span>
           )}
         </div>
       ),
@@ -107,28 +105,10 @@ const ChitFundsPage = () => {
     { header: 'Total Amount', accessor: (row) => <span className="font-semibold text-slate-700">{fmt(row.totalAmount)}</span> },
     { header: 'Monthly (₹)', accessor: (row) => fmt(row.monthlyContribution) },
     {
-      header: 'Progress',
+      header: 'Duration',
       accessor: (row) => (
-        <div className="flex flex-col gap-1 min-w-[100px]">
-          <span className="text-xs font-bold text-slate-600">Month {row.currentMonth} / {row.duration}</span>
-          <div className="w-full bg-slate-100 rounded-full h-1.5">
-            <div
-              className="bg-blue-500 h-1.5 rounded-full transition-all"
-              style={{ width: `${Math.min((row.currentMonth / row.duration) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Start Date',
-      accessor: (row) => new Date(row.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    },
-    {
-      header: 'Status',
-      accessor: (row) => (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[row.status] || ''}`}>
-          {row.status}
+        <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
+          {row.durationMonths} months
         </span>
       ),
     },
@@ -139,14 +119,14 @@ const ChitFundsPage = () => {
           <button
             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }}
             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit"
+            title="Edit Template"
           >
             <Edit2 size={16} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }}
             className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-            title="Delete"
+            title="Delete Template"
           >
             <Trash2 size={16} />
           </button>
@@ -155,20 +135,20 @@ const ChitFundsPage = () => {
     },
   ];
 
-  const filtered = chitFunds.filter((f) =>
-    f.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = templates.filter((t) =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="p-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Chit Funds</h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Manage active and past chit fund schemes.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Chit Fund Templates</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">Define reusable blueprints for chit fund schemes.</p>
         </div>
         <button onClick={handleOpenAddModal} className="flex items-center gap-2 btn-primary">
           <Plus size={18} />
-          <span>New Chit Fund</span>
+          <span>New Template</span>
         </button>
       </div>
 
@@ -176,7 +156,7 @@ const ChitFundsPage = () => {
         <Search className="text-slate-400" size={20} />
         <input
           type="text"
-          placeholder="Search chit funds..."
+          placeholder="Search templates..."
           className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -186,22 +166,25 @@ const ChitFundsPage = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 text-slate-500">
           <Loader2 className="animate-spin mb-4" size={40} />
-          <p className="font-medium">Loading chit funds...</p>
+          <p className="font-medium">Loading templates...</p>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100 italic">
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
-          <button onClick={fetchChitFunds} className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800">
+          <button
+            onClick={fetchTemplates}
+            className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
+          >
             Refresh
           </button>
         </div>
       ) : (
         <div className="card-clean overflow-hidden">
-          <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfunds/${row.id}`)} />
+          <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfund-templates/${row.id}`)} />
           {filtered.length === 0 && (
             <div className="py-20 text-center text-slate-400 font-medium">
-              {searchTerm ? 'No chit funds match your search.' : 'No chit funds yet. Create one to get started.'}
+              {searchTerm ? 'No templates match your search.' : 'No templates yet. Create one to get started.'}
             </div>
           )}
         </div>
@@ -211,17 +194,16 @@ const ChitFundsPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => !isSubmitting && setIsModalOpen(false)}
-        title={selectedFund ? 'Edit Chit Fund' : 'New Chit Fund'}
-        maxWidth="max-w-lg"
+        title={selectedTemplate ? 'Edit Template' : 'New Chit Fund Template'}
       >
-        <ChitFundForm onSubmit={handleAddOrEdit} isLoading={isSubmitting} initialData={selectedFund} />
+        <ChitFundTemplateForm onSubmit={handleAddOrEdit} isLoading={isSubmitting} initialData={selectedTemplate} />
       </Modal>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => !isSubmitting && setIsDeleteModalOpen(false)}
-        title="Delete Chit Fund"
+        title="Delete Template"
         maxWidth="max-w-sm"
       >
         <div className="space-y-4 text-center">
@@ -230,7 +212,7 @@ const ChitFundsPage = () => {
           </div>
           <p className="text-slate-600 text-sm leading-relaxed">
             Are you sure you want to delete{' '}
-            <span className="font-bold text-slate-900">{selectedFund?.name}</span>? This cannot be undone.
+            <span className="font-bold text-slate-900">{selectedTemplate?.name}</span>? This cannot be undone.
           </p>
           <div className="flex gap-3 pt-2">
             <button
@@ -254,4 +236,4 @@ const ChitFundsPage = () => {
   );
 };
 
-export default ChitFundsPage;
+export default ChitFundTemplatesPage;

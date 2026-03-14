@@ -7,36 +7,45 @@ import {
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ChitFundForm from '../components/chitfunds/ChitFundForm';
+import { ChitFund, ChitFundStatus } from '../types';
 
-const STATUS_STYLES = {
-  ACTIVE:    'bg-emerald-50 text-emerald-700 border-emerald-200',
-  INACTIVE:  'bg-slate-100 text-slate-500 border-slate-200',
+const STATUS_STYLES: Record<ChitFundStatus, string> = {
+  ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  INACTIVE: 'bg-slate-100 text-slate-500 border-slate-200',
   COMPLETED: 'bg-blue-50 text-blue-700 border-blue-200',
-  CLOSED:    'bg-rose-50 text-rose-600 border-rose-200',
+  CLOSED: 'bg-rose-50 text-rose-600 border-rose-200',
 };
 
-const fmt = (n) =>
+const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
-const InfoRow = ({ icon: Icon, label, value }) => (
+interface InfoRowProps {
+  icon: React.ElementType;
+  label: string;
+  value?: React.ReactNode;
+}
+
+const InfoRow = ({ icon: Icon, label, value }: InfoRowProps) => (
   <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
     <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
       <Icon size={15} className="text-slate-400" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-      <div className="text-sm font-semibold text-slate-800">{value ?? <span className="italic text-slate-300 font-normal">Not set</span>}</div>
+      <div className="text-sm font-semibold text-slate-800">
+        {value ?? <span className="italic text-slate-300 font-normal">Not set</span>}
+      </div>
     </div>
   </div>
 );
 
 const ChitFundDetailPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [fund, setFund] = useState(null);
+  const [fund, setFund] = useState<ChitFund | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,11 +53,15 @@ const ChitFundDetailPage = () => {
   const fetchFund = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`/chit-funds/${id}`);
+      const res = await axios.get<{ data: ChitFund }>(`/chit-funds/${id}`);
       setFund(res.data.data);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load chit fund.');
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Failed to load chit fund.');
+      } else {
+        setError('Failed to load chit fund.');
+      }
     } finally {
       setLoading(false);
     }
@@ -56,14 +69,16 @@ const ChitFundDetailPage = () => {
 
   useEffect(() => { fetchFund(); }, [id]);
 
-  const handleEdit = async (formData) => {
+  const handleEdit = async (formData: Record<string, unknown>) => {
     try {
       setIsSubmitting(true);
-      const res = await axios.put(`/chit-funds/${id}`, formData);
+      const res = await axios.put<{ data: ChitFund }>(`/chit-funds/${id}`, formData);
       setFund(res.data.data);
       setIsEditModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update chit fund.');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to update chit fund.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -75,7 +90,9 @@ const ChitFundDetailPage = () => {
       await axios.delete(`/chit-funds/${id}`);
       navigate('/chitfunds');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete chit fund.');
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || 'Failed to delete chit fund.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -89,7 +106,7 @@ const ChitFundDetailPage = () => {
     );
   }
 
-  if (error) {
+  if (error || !fund) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100">
         <AlertCircle size={40} className="mb-3" />
