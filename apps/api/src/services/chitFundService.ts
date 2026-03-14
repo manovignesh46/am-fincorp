@@ -1,4 +1,4 @@
-import { ChitFund, ChitFundTemplate, sequelize } from '@am-fincorp/database';
+import { ChitFund, ChitFundTemplate, ChitFundEnrollment, Member, sequelize } from '@am-fincorp/database';
 
 class ChitFundService {
   async createChitFund(chitFundData: Record<string, unknown>): Promise<any> {
@@ -69,6 +69,46 @@ class ChitFundService {
     } catch (error) {
       await t.rollback();
       console.error(`Error deleting Chit Fund with ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // ── Enrollments ────────────────────────────────────────────────────────────
+
+  async getEnrollments(chitFundId: string): Promise<any[]> {
+    try {
+      return await ChitFundEnrollment.findAll({
+        where: { chitFundId },
+        include: [{ model: Member, attributes: ['id', 'name', 'contact', 'email'] }],
+        order: [['ticketNumber', 'ASC']],
+      });
+    } catch (error) {
+      console.error(`Error fetching enrollments for ChitFund ${chitFundId}:`, error);
+      throw new Error('Could not fetch enrollments');
+    }
+  }
+
+  async addMember(chitFundId: string, memberId: string, ticketNumber?: number): Promise<any> {
+    try {
+      const existing = await ChitFundEnrollment.findOne({ where: { chitFundId, memberId } } as any);
+      if (existing) throw new Error('Member is already enrolled in this chit fund');
+      const enrollment = await ChitFundEnrollment.create({ chitFundId, memberId, ticketNumber } as any);
+      return await ChitFundEnrollment.findByPk((enrollment as any).id, {
+        include: [{ model: Member, attributes: ['id', 'name', 'contact', 'email'] }],
+      });
+    } catch (error) {
+      console.error(`Error enrolling member ${memberId} in ChitFund ${chitFundId}:`, error);
+      throw error;
+    }
+  }
+
+  async removeEnrollment(chitFundId: string, enrollmentId: string): Promise<void> {
+    try {
+      const enrollment = (await ChitFundEnrollment.findOne({ where: { id: enrollmentId, chitFundId } } as any)) as any;
+      if (!enrollment) throw new Error('Enrollment not found');
+      await enrollment.destroy();
+    } catch (error) {
+      console.error(`Error removing enrollment ${enrollmentId}:`, error);
       throw error;
     }
   }

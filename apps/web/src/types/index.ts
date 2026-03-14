@@ -52,6 +52,22 @@ export interface ChitFund {
   createdAt: string;
 }
 
+// ─── Chit Fund Enrollment ─────────────────────────────────────────────────────
+export type EnrollmentStatus = 'ACTIVE' | 'COMPLETED' | 'DEFAULTED';
+
+export interface ChitFundEnrollment {
+  id: number;
+  chitFundId: number;
+  memberId: number;
+  ticketNumber?: number | null;
+  joinDate: string;
+  auctionWon: boolean;
+  auctionMonth?: number | null;
+  status: EnrollmentStatus;
+  Member?: Pick<Member, 'id' | 'name' | 'contact' | 'email'>;
+  createdAt: string;
+}
+
 // ─── Transaction ──────────────────────────────────────────────────────────────
 export type TransactionNature = 'CREDIT' | 'DEBIT';
 

@@ -79,6 +79,41 @@ class ChitFundController {
       });
     }
   }
+
+  async getEnrollments(req: Request, res: Response): Promise<void> {
+    try {
+      const enrollments = await chitFundService.getEnrollments(req.params.id);
+      res.status(200).json({ success: true, data: enrollments });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  async addMember(req: Request, res: Response): Promise<void> {
+    try {
+      const { memberId, ticketNumber } = req.body;
+      if (!memberId) {
+        res.status(400).json({ success: false, message: 'memberId is required' });
+        return;
+      }
+      const enrollment = await chitFundService.addMember(req.params.id, String(memberId), ticketNumber);
+      res.status(201).json({ success: true, data: enrollment });
+    } catch (error) {
+      const msg = (error as Error).message;
+      const status = msg.includes('already enrolled') ? 409 : 400;
+      res.status(status).json({ success: false, message: msg });
+    }
+  }
+
+  async removeEnrollment(req: Request, res: Response): Promise<void> {
+    try {
+      await chitFundService.removeEnrollment(req.params.id, req.params.enrollmentId);
+      res.status(200).json({ success: true, message: 'Member removed from chit fund' });
+    } catch (error) {
+      const status = (error as Error).message === 'Enrollment not found' ? 404 : 500;
+      res.status(status).json({ success: false, message: (error as Error).message });
+    }
+  }
 }
 
 export default new ChitFundController();
