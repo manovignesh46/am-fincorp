@@ -1,25 +1,76 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/layout/Layout';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
 import MembersPage from './pages/MembersPage';
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+// Public Route (Accessible only when logged out)
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+  
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
+};
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Simple navigation/header for now */}
-      <nav className="bg-white border-b border-slate-200 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
-              AM
-            </div>
-            <span className="font-bold text-slate-800 text-lg">AM-Fincorp</span>
-          </div>
-        </div>
-      </nav>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
 
-      <main>
-        <MembersPage />
-      </main>
-    </div>
+          {/* Protected Main Layout Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="members" element={<MembersPage />} />
+            
+            {/* Placeholders for other sections */}
+            <Route path="loans" element={<div className="p-8 text-center text-slate-400">Loans Management Coming Soon</div>} />
+            <Route path="chitfunds" element={<div className="p-8 text-center text-slate-400">Chit Funds Management Coming Soon</div>} />
+            <Route path="transactions" element={<div className="p-8 text-center text-slate-400">Transactions Ledger Coming Soon</div>} />
+          </Route>
+
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

@@ -2,11 +2,12 @@
   "name": "am-fincorp",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r dev",
+    "dev": "concurrently -n \"API,WEB\" -c \"cyan,magenta\" \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
     "build": "pnpm -r build",
     "start": "pnpm -r start"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "prettier": "^3.0.0"
   }
 }

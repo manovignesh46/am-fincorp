@@ -1,9 +1,9 @@
-const bcrypt = require('bcryptjs');
-const { User, sequelize } = require('../index');
 const path = require('path');
 // Load environment variables from apps/api/.env specifically for this script
-require('dotenv').config({ path: path.join(__dirname, '../../../apps/api/.env') });
+require('dotenv').config({ path: '/home/mano/code/my_projects/am-fincorp/apps/api/.env' });
 
+const bcrypt = require('bcryptjs');
+const { User, sequelize } = require('../index');
 const config = require('../../../apps/api/src/config');
 
 async function seedUsers() {

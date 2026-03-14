@@ -2,10 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const config = require('./config');
 require('dotenv').config();
 
 const chitFundRoutes = require('./routes/chitFundRoutes');
 const memberRoutes = require('./routes/memberRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -16,6 +18,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/chit-funds', chitFundRoutes);
 app.use('/api/members', memberRoutes);
 
@@ -34,12 +37,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = config.server.port || 5000;
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 module.exports = app;
