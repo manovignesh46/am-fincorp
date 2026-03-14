@@ -3,24 +3,88 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Font Family - Configurable */
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Brand Colors - Configurable */
+  --color-primary: #2563eb;
+  /* Blue 600 */
+  --color-primary-dark: #1d4ed8;
+  /* Blue 700 */
+  --color-primary-light: #eff6ff;
+  /* Blue 50 */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Neutral Palette */
+  --color-bg-app: #f8fafc;
+  /* Slate 50 */
+  --color-bg-card: #ffffff;
+  --color-bg-sidebar: #ffffff;
+
+  /* Borders and Separators */
+  --color-border: #e2e8f0;
+  /* Slate 200 */
+  --color-border-hover: #cbd5e1;
+  /* Slate 300 */
+
+  /* Typography Colors */
+  --color-text-main: #0f172a;
+  /* Slate 900 */
+  --color-text-muted: #64748b;
+  /* Slate 500 */
+  --color-text-inverse: #ffffff;
+
+  /* UI Tokens */
+  --radius-main: 0.75rem;
+  /* 12px */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+@layer base {
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-bg-app);
+    color: var(--color-text-main);
+    font-family: var(--font-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-[var(--radius-main)] hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm active:scale-[0.98];
+  }
+
+  .card-clean {
+    @apply bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-main)] shadow-sm;
+  }
+}
+
+/* Custom Scrollbar - Minimalist */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

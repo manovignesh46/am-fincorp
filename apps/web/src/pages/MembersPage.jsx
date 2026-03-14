@@ -1,54 +1,121 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UserPlus, Search, AlertCircle, Loader2 } from 'lucide-react';
+import { UserPlus, Search, AlertCircle, Loader2, Edit2, Trash2, Eye } from 'lucide-react';
 import DataTable from '../components/ui/DataTable';
+import Modal from '../components/ui/Modal';
+import MemberForm from '../components/members/MemberForm';
 
 const MembersPage = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/members');
+      setMembers(response.data.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching members:', err);
+      setError('Failed to load member directory. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        setLoading(true);
-        // Assuming API endpoint is /api/members
-        const response = await axios.get('/api/members');
-        setMembers(response.data.data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching members:', err);
-        setError('Failed to load member directory. Please try again later.');
-        // For demonstration purposes if API isn't up, setting some dummy data could be helpful
-        // but as per strict rules we should handle real flow.
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchMembers();
   }, []);
 
+  const handleOpenAddModal = () => {
+    setSelectedMember(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (member) => {
+    setSelectedMember(member);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenDeleteModal = (member) => {
+    setSelectedMember(member);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleAddOrEditMember = async (formData) => {
+    try {
+      setIsSubmitting(true);
+      if (selectedMember) {
+        // UPDATE
+        await axios.put(`/members/${selectedMember.id}`, formData);
+      } else {
+        // CREATE
+        await axios.post('/members', formData);
+      }
+      await fetchMembers(); // Refresh list
+      setIsModalOpen(false); // Close modal
+    } catch (err) {
+      console.error('Error saving member:', err);
+      alert(err.response?.data?.message || 'Failed to save member');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedMember) return;
+    try {
+      setIsSubmitting(true);
+      await axios.delete(`/members/${selectedMember.id}`);
+      await fetchMembers(); // Refresh list
+      setIsDeleteModalOpen(false); // Close modal
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      alert(err.response?.data?.message || 'Failed to delete member');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const columns = [
-    { header: 'Name', accessor: 'name' },
+    { header: 'Name', accessor: (row) => (
+      <div className="flex flex-col">
+        <span className="font-bold text-slate-900">{row.name}</span>
+        <span className="text-[10px] text-slate-400 uppercase tracking-tight">ID: {String(row.id).substring(0, 8)}</span>
+      </div>
+    )},
     { header: 'Contact', accessor: 'contact' },
-    { header: 'Email', accessor: (row) => row.email || '-' },
+    { header: 'Email', accessor: (row) => row.email || <span className="text-slate-300 italic">Not set</span> },
     { header: 'Address', accessor: (row) => row.address ? (
-      <span className="truncate max-w-[200px] block">{row.address}</span>
+      <span className="truncate max-w-[180px] block text-xs text-slate-500">{row.address}</span>
     ) : '-' },
     {
       header: 'Actions',
       accessor: (row) => (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log('Edit member', row.id);
-          }}
-          className="text-indigo-600 hover:text-indigo-900 font-medium"
-        >
-          View Details
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => handleOpenEditModal(row)}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            title="Edit Member"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button 
+            onClick={() => handleOpenDeleteModal(row)}
+            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+            title="Delete Member"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       )
     }
   ];
@@ -59,48 +126,105 @@ const MembersPage = () => {
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Member Directory</h1>
-          <p className="text-slate-500 mt-1">Manage and view all human participants in the system.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Member Directory</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">Create, update, and manage all participants.</p>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+        <button 
+          onClick={handleOpenAddModal}
+          className="flex items-center gap-2 btn-primary"
+        >
           <UserPlus size={18} />
           <span>Add Member</span>
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3 group focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
         <Search className="text-slate-400" size={20} />
         <input 
           type="text" 
-          placeholder="Search members by name or contact..." 
-          className="flex-1 outline-none text-slate-700 placeholder:text-slate-400"
+          placeholder="Search by name or contact..." 
+          className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+        <div className="flex flex-col items-center justify-center py-24 text-slate-500">
           <Loader2 className="animate-spin mb-4" size={40} />
-          <p>Loading member directory...</p>
+          <p className="font-medium">Fetching directory...</p>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 text-red-500 bg-red-50 rounded-xl border border-red-100">
+        <div className="flex flex-col items-center justify-center py-20 text-rose-500 bg-rose-50 rounded-2xl border border-rose-100 italic">
           <AlertCircle className="mb-4" size={40} />
-          <p className="font-semibold">{error}</p>
+          <p className="font-bold">{error}</p>
           <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 text-sm underline underline-offset-4 hover:text-red-700"
+            onClick={() => fetchMembers()}
+            className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
           >
-            Try Again
+            Refresh
           </button>
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredMembers} />
+        <div className="card-clean overflow-hidden">
+          <DataTable columns={columns} data={filteredMembers} />
+          {filteredMembers.length === 0 && (
+            <div className="py-20 text-center text-slate-400 font-medium">
+              No members found matching your search.
+            </div>
+          )}
+        </div>
       )}
+
+      {/* Add/Edit Member Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => !isSubmitting && setIsModalOpen(false)} 
+        title={selectedMember ? 'Update Member Details' : 'Register New Member'}
+      >
+        <MemberForm 
+          onSubmit={handleAddOrEditMember} 
+          isLoading={isSubmitting} 
+          initialData={selectedMember} 
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !isSubmitting && setIsDeleteModalOpen(false)}
+        title="Delete Member"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4 text-center">
+          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-2">
+            <Trash2 size={32} />
+          </div>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            Are you sure you want to delete <span className="font-bold text-slate-900">{selectedMember?.name}</span>? 
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteConfirm}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-colors text-sm shadow-lg shadow-rose-100"
+            >
+              {isSubmitting ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Delete Now'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

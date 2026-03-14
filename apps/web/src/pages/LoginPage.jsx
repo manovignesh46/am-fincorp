@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -16,76 +16,81 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-lg shadow-indigo-200">
+    <div className="min-h-screen bg-[var(--color-bg-app)] flex flex-col items-center justify-center p-6">
+      <div className="max-w-md w-full">
+        {/* Logo Section */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-12 h-12 bg-[var(--color-primary)] rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-sm mb-4">
             AM
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">AM-Fincorp Portal</h1>
-          <p className="text-slate-500 mt-2">Sign in to manage financial records</p>
+          <h1 className="text-2xl font-bold text-[var(--color-text-main)] tracking-tight">AM-Fincorp Portal</h1>
+          <p className="text-[var(--color-text-muted)] text-sm mt-1 font-medium">Internal Management System</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl mb-6 flex items-start gap-3">
-            <AlertCircle className="shrink-0 mt-0.5" size={18} />
-            <p className="text-sm font-medium">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Mail size={18} />
-              </div>
-              <input
-                type="email"
-                required
-                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
-                placeholder="admin@amfincorp.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        {/* Login Card */}
+        <div className="bg-white border border-[var(--color-border)] rounded-2xl shadow-sm p-8">
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-xl mb-6 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="shrink-0 mt-0.5" size={18} />
+              <p className="text-sm font-semibold">{error}</p>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Lock size={18} />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1">Email Address</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                <input
+                  type="email"
+                  required
+                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:bg-white outline-none transition-all font-medium text-slate-900 placeholder:text-slate-300 sm:text-sm"
+                  placeholder="admin@amfincorp.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-              <input
-                type="password"
-                required
-                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-100 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
-          >
-            {isLoading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              <>
-                Sign In
-              </>
-            )}
-          </button>
-        </form>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1">Password</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                <input
+                  type="password"
+                  required
+                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] focus:bg-white outline-none transition-all font-medium text-slate-900 placeholder:text-slate-300 sm:text-sm"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
 
-        <p className="text-center text-slate-400 text-xs mt-8">
-          © 2026 AM-Fincorp Internal Management System
-        </p>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-primary py-3 flex items-center justify-center gap-2 group mt-2"
+            >
+              {isLoading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center flex items-center justify-center gap-2 text-[var(--color-text-muted)]">
+          <ShieldCheck size={14} />
+          <p className="text-[10px] font-bold uppercase tracking-widest">
+            Authorized Personnel Only
+          </p>
+        </div>
       </div>
     </div>
   );
