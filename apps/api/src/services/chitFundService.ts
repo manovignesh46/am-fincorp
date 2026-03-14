@@ -1,12 +1,7 @@
-const { ChitFund, ChitFundTemplate, sequelize } = require('@am-fincorp/database');
+import { ChitFund, ChitFundTemplate, sequelize } from '@am-fincorp/database';
 
 class ChitFundService {
-  /**
-   * Create a new Chit Fund
-   * @param {Object} chitFundData 
-   * @returns {Promise<Object>}
-   */
-  async createChitFund(chitFundData) {
+  async createChitFund(chitFundData: Record<string, unknown>): Promise<any> {
     const t = await sequelize.transaction();
     try {
       const chitFund = await ChitFund.create(chitFundData, { transaction: t });
@@ -15,18 +10,14 @@ class ChitFundService {
     } catch (error) {
       await t.rollback();
       console.error('Error creating Chit Fund:', error);
-      throw new Error('Could not create Chit Fund: ' + error.message);
+      throw new Error('Could not create Chit Fund: ' + (error as Error).message);
     }
   }
 
-  /**
-   * Get all Chit Funds
-   * @returns {Promise<Array>}
-   */
-  async getAllChitFunds() {
+  async getAllChitFunds(): Promise<any[]> {
     try {
       return await ChitFund.findAll({
-        include: [{ model: ChitFundTemplate }]
+        include: [{ model: ChitFundTemplate }],
       });
     } catch (error) {
       console.error('Error fetching Chit Funds:', error);
@@ -34,15 +25,10 @@ class ChitFundService {
     }
   }
 
-  /**
-   * Get a single Chit Fund by ID
-   * @param {number} id 
-   * @returns {Promise<Object>}
-   */
-  async getChitFundById(id) {
+  async getChitFundById(id: string): Promise<any> {
     try {
       const chitFund = await ChitFund.findByPk(id, {
-        include: [{ model: ChitFundTemplate }]
+        include: [{ model: ChitFundTemplate }],
       });
       if (!chitFund) {
         throw new Error('Chit Fund not found');
@@ -54,16 +40,10 @@ class ChitFundService {
     }
   }
 
-  /**
-   * Update a Chit Fund
-   * @param {number} id 
-   * @param {Object} updateData 
-   * @returns {Promise<Object>}
-   */
-  async updateChitFund(id, updateData) {
+  async updateChitFund(id: string, updateData: Record<string, unknown>): Promise<any> {
     const t = await sequelize.transaction();
     try {
-      const chitFund = await ChitFund.findByPk(id);
+      const chitFund = (await ChitFund.findByPk(id)) as any;
       if (!chitFund) {
         throw new Error('Chit Fund not found');
       }
@@ -77,15 +57,10 @@ class ChitFundService {
     }
   }
 
-  /**
-   * Soft delete a Chit Fund
-   * @param {number} id 
-   * @returns {Promise<void>}
-   */
-  async deleteChitFund(id) {
+  async deleteChitFund(id: string): Promise<void> {
     const t = await sequelize.transaction();
     try {
-      const chitFund = await ChitFund.findByPk(id);
+      const chitFund = (await ChitFund.findByPk(id)) as any;
       if (!chitFund) {
         throw new Error('Chit Fund not found');
       }
@@ -99,4 +74,4 @@ class ChitFundService {
   }
 }
 
-module.exports = new ChitFundService();
+export default new ChitFundService();

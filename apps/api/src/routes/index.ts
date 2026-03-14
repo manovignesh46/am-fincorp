@@ -1,13 +1,12 @@
-const express = require('express');
-const router = express.Router();
+import { Router, IRouter } from 'express';
+import authenticate from '../middleware/auth';
+import authRoutes from './authRoutes';
+import memberRoutes from './memberRoutes';
+import chitFundRoutes from './chitFundRoutes';
+import chitFundTemplateRoutes from './chitFundTemplateRoutes';
+import transactionRoutes from './transactionRoutes';
 
-const authenticate = require('../middleware/auth');
-
-const authRoutes = require('./authRoutes');
-const memberRoutes = require('./memberRoutes');
-const chitFundRoutes = require('./chitFundRoutes');
-const chitFundTemplateRoutes = require('./chitFundTemplateRoutes');
-const transactionRoutes = require('./transactionRoutes');
+const router: IRouter = Router();
 
 // ─── Public routes ────────────────────────────────────────────────────────────
 router.use('/auth', authRoutes);
@@ -20,4 +19,4 @@ router.use('/chit-funds', chitFundRoutes);
 router.use('/chit-fund-templates', chitFundTemplateRoutes);
 router.use('/transactions', transactionRoutes);
 
-module.exports = router;
+export default router;

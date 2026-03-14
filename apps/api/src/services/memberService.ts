@@ -1,16 +1,16 @@
-const { Member, sequelize } = require('@am-fincorp/database');
+import { Member } from '@am-fincorp/database';
 
 class MemberService {
-  async createMember(memberData) {
+  async createMember(memberData: Record<string, unknown>): Promise<any> {
     try {
       return await Member.create(memberData);
     } catch (error) {
       console.error('Error creating member:', error);
-      throw new Error('Could not create member: ' + error.message);
+      throw new Error('Could not create member: ' + (error as Error).message);
     }
   }
 
-  async getAllMembers() {
+  async getAllMembers(): Promise<any[]> {
     try {
       return await Member.findAll();
     } catch (error) {
@@ -19,7 +19,7 @@ class MemberService {
     }
   }
 
-  async getMemberById(id) {
+  async getMemberById(id: string): Promise<any> {
     try {
       const member = await Member.findByPk(id);
       if (!member) throw new Error('Member not found');
@@ -30,9 +30,9 @@ class MemberService {
     }
   }
 
-  async updateMember(id, updateData) {
+  async updateMember(id: string, updateData: Record<string, unknown>): Promise<any> {
     try {
-      const member = await Member.findByPk(id);
+      const member = (await Member.findByPk(id)) as any;
       if (!member) throw new Error('Member not found');
       return await member.update(updateData);
     } catch (error) {
@@ -41,9 +41,9 @@ class MemberService {
     }
   }
 
-  async deleteMember(id) {
+  async deleteMember(id: string): Promise<void> {
     try {
-      const member = await Member.findByPk(id);
+      const member = (await Member.findByPk(id)) as any;
       if (!member) throw new Error('Member not found');
       await member.destroy();
     } catch (error) {
@@ -53,4 +53,4 @@ class MemberService {
   }
 }
 
-module.exports = new MemberService();
+export default new MemberService();

@@ -1,14 +1,27 @@
-const { Transaction, User } = require('@am-fincorp/database');
+import { Transaction, User } from '@am-fincorp/database';
+
+interface TransactionFilters {
+  nature?: string;
+  category?: string;
+  userId?: string;
+}
+
+interface TransactionSummary {
+  totalCredits: number;
+  totalDebits: number;
+  netBalance: number;
+}
+
+interface PartnerBalance {
+  credits: number;
+  debits: number;
+  balance: number;
+}
 
 class TransactionService {
-  /**
-   * Get all transactions with optional filters
-   * @param {Object} filters - { nature, category, userId }
-   * @returns {Promise<Array>}
-   */
-  async getAll(filters = {}) {
+  async getAll(filters: TransactionFilters = {}): Promise<any[]> {
     try {
-      const where = {};
+      const where: Record<string, unknown> = {};
       if (filters.nature) where.nature = filters.nature;
       if (filters.category) where.category = filters.category;
       if (filters.userId) where.userId = Number(filters.userId);
@@ -24,14 +37,7 @@ class TransactionService {
     }
   }
 
-  /**
-   * Create a manual transaction (e.g., RECORD_AMOUNT)
-   * userId is injected from the authenticated user (req.user.id)
-   * @param {Object} data
-   * @param {number} userId
-   * @returns {Promise<Transaction>}
-   */
-  async create(data, userId) {
+  async create(data: Record<string, unknown>, userId: number): Promise<any> {
     try {
       if (!data.amount || Number(data.amount) <= 0) {
         throw new Error('Amount must be greater than 0');
@@ -39,18 +45,14 @@ class TransactionService {
       return await Transaction.create({ ...data, userId });
     } catch (error) {
       console.error('Error creating transaction:', error);
-      throw new Error(error.message);
+      throw new Error((error as Error).message);
     }
   }
 
-  /**
-   * Get overall ledger summary: total credits, debits, net balance
-   * @returns {Promise<Object>}
-   */
-  async getSummary() {
+  async getSummary(): Promise<TransactionSummary> {
     try {
-      const totalCredits = (await Transaction.sum('amount', { where: { nature: 'CREDIT' } })) || 0;
-      const totalDebits = (await Transaction.sum('amount', { where: { nature: 'DEBIT' } })) || 0;
+      const totalCredits = ((await (Transaction as any).sum('amount', { where: { nature: 'CREDIT' } })) as number) || 0;
+      const totalDebits = ((await (Transaction as any).sum('amount', { where: { nature: 'DEBIT' } })) as number) || 0;
       return { totalCredits, totalDebits, netBalance: totalCredits - totalDebits };
     } catch (error) {
       console.error('Error fetching transaction summary:', error);
@@ -58,12 +60,7 @@ class TransactionService {
     }
   }
 
-  /**
-   * Get a single transaction by ID
-   * @param {number} id
-   * @returns {Promise<Transaction>}
-   */
-  async getById(id) {
+  async getById(id: string): Promise<any> {
     try {
       const transaction = await Transaction.findByPk(id, {
         include: [{ model: User, as: 'handler', attributes: ['id', 'name', 'email'] }],
@@ -76,15 +73,10 @@ class TransactionService {
     }
   }
 
-  /**
-   * Get cash-in-hand balance for a specific partner
-   * @param {number} userId
-   * @returns {Promise<Object>}
-   */
-  async getPartnerBalance(userId) {
+  async getPartnerBalance(userId: string | number): Promise<PartnerBalance> {
     try {
-      const credits = (await Transaction.sum('amount', { where: { userId, nature: 'CREDIT' } })) || 0;
-      const debits = (await Transaction.sum('amount', { where: { userId, nature: 'DEBIT' } })) || 0;
+      const credits = ((await (Transaction as any).sum('amount', { where: { userId, nature: 'CREDIT' } })) as number) || 0;
+      const debits = ((await (Transaction as any).sum('amount', { where: { userId, nature: 'DEBIT' } })) as number) || 0;
       return { credits, debits, balance: credits - debits };
     } catch (error) {
       console.error('Error computing partner balance:', error);
@@ -93,4 +85,4 @@ class TransactionService {
   }
 }
 
-module.exports = new TransactionService();
+export default new TransactionService();

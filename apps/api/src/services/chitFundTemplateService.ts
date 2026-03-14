@@ -1,25 +1,16 @@
-const { ChitFundTemplate } = require('@am-fincorp/database');
+import { ChitFundTemplate } from '@am-fincorp/database';
 
 class ChitFundTemplateService {
-  /**
-   * Create a new Chit Fund Template
-   * @param {Object} data
-   * @returns {Promise<ChitFundTemplate>}
-   */
-  async createTemplate(data) {
+  async createTemplate(data: Record<string, unknown>): Promise<any> {
     try {
       return await ChitFundTemplate.create(data);
     } catch (error) {
       console.error('Error creating ChitFund Template:', error);
-      throw new Error('Could not create template: ' + error.message);
+      throw new Error('Could not create template: ' + (error as Error).message);
     }
   }
 
-  /**
-   * Get all Chit Fund Templates
-   * @returns {Promise<Array>}
-   */
-  async getAllTemplates() {
+  async getAllTemplates(): Promise<any[]> {
     try {
       return await ChitFundTemplate.findAll({ order: [['createdAt', 'DESC']] });
     } catch (error) {
@@ -28,12 +19,7 @@ class ChitFundTemplateService {
     }
   }
 
-  /**
-   * Get a single Chit Fund Template by ID
-   * @param {number} id
-   * @returns {Promise<ChitFundTemplate>}
-   */
-  async getTemplateById(id) {
+  async getTemplateById(id: string): Promise<any> {
     try {
       const template = await ChitFundTemplate.findByPk(id);
       if (!template) throw new Error('Template not found');
@@ -44,15 +30,9 @@ class ChitFundTemplateService {
     }
   }
 
-  /**
-   * Update a Chit Fund Template
-   * @param {number} id
-   * @param {Object} data
-   * @returns {Promise<ChitFundTemplate>}
-   */
-  async updateTemplate(id, data) {
+  async updateTemplate(id: string, data: Record<string, unknown>): Promise<any> {
     try {
-      const template = await ChitFundTemplate.findByPk(id);
+      const template = (await ChitFundTemplate.findByPk(id)) as any;
       if (!template) throw new Error('Template not found');
       await template.update(data);
       return template;
@@ -62,14 +42,9 @@ class ChitFundTemplateService {
     }
   }
 
-  /**
-   * Soft-delete a Chit Fund Template
-   * @param {number} id
-   * @returns {Promise<void>}
-   */
-  async deleteTemplate(id) {
+  async deleteTemplate(id: string): Promise<void> {
     try {
-      const template = await ChitFundTemplate.findByPk(id);
+      const template = (await ChitFundTemplate.findByPk(id)) as any;
       if (!template) throw new Error('Template not found');
       await template.destroy();
     } catch (error) {
@@ -79,4 +54,4 @@ class ChitFundTemplateService {
   }
 }
 
-module.exports = new ChitFundTemplateService();
+export default new ChitFundTemplateService();

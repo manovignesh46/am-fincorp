@@ -1,22 +1,28 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { User } = require('@am-fincorp/database');
-const config = require('../config');
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { User } from '@am-fincorp/database';
+import config from '../config';
+
+interface UserResponse {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface LoginResult {
+  user: UserResponse;
+  token: string;
+}
 
 class AuthService {
-  /**
-   * Login user and return JWT
-   * @param {string} email 
-   * @param {string} password 
-   * @returns {Promise<Object>}
-   */
-  async login(email, password) {
+  async login(email: string, password: string): Promise<LoginResult> {
     try {
       if (!email || !password) {
         throw new Error('Email and password are required');
       }
 
-      const user = await User.findOne({ where: { email, isActive: true } });
+      const user = (await User.findOne({ where: { email, isActive: true } })) as any;
       if (!user) {
         throw new Error('Invalid credentials');
       }
@@ -26,19 +32,17 @@ class AuthService {
         throw new Error('Invalid credentials');
       }
 
-      // Generate JWT
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
         config.auth.jwtSecret,
-        { expiresIn: config.auth.jwtExpiresIn }
+        { expiresIn: config.auth.jwtExpiresIn as any }
       );
 
-      // Return user info (except password) and token
-      const userResponse = {
+      const userResponse: UserResponse = {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
       };
 
       return { user: userResponse, token };
@@ -48,19 +52,14 @@ class AuthService {
     }
   }
 
-  /**
-   * Verify JWT and return user
-   * @param {string} token 
-   * @returns {Promise<Object>}
-   */
-  async verifyToken(token) {
+  async verifyToken(token: string): Promise<any> {
     try {
-      const decoded = jwt.verify(token, config.auth.jwtSecret);
+      const decoded = jwt.verify(token, config.auth.jwtSecret) as { id: number };
       const user = await User.findByPk(decoded.id, {
-        attributes: { exclude: ['password'] }
+        attributes: { exclude: ['password'] },
       });
 
-      if (!user || !user.isActive) {
+      if (!user || !(user as any).isActive) {
         throw new Error('User not found or inactive');
       }
 
@@ -72,4 +71,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

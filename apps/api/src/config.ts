@@ -1,6 +1,32 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const config = {
+interface PartnerConfig {
+  name: string;
+  email: string | undefined;
+  password: string | undefined;
+  role: string;
+}
+
+interface Config {
+  server: {
+    port: string | number;
+    env: string;
+  };
+  db: {
+    url: string | undefined;
+  };
+  auth: {
+    jwtSecret: string;
+    jwtExpiresIn: string;
+  };
+  initialUsers: {
+    superAdmin: PartnerConfig;
+    partners: PartnerConfig[];
+  };
+}
+
+const config: Config = {
   server: {
     port: process.env.PORT || 5000,
     env: process.env.NODE_ENV || 'development',
@@ -36,4 +62,4 @@ const config = {
   },
 };
 
-module.exports = config;
+export default config;
