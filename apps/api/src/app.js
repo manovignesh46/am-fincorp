@@ -5,6 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const chitFundRoutes = require('./routes/chitFundRoutes');
+const memberRoutes = require('./routes/memberRoutes');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/chit-funds', chitFundRoutes);
+app.use('/api/members', memberRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
