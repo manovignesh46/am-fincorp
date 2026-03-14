@@ -18,13 +18,20 @@ export interface Member {
 }
 
 // ─── Chit Fund Template ───────────────────────────────────────────────────────
+export interface TemplateMonthSchedule {
+  month: number;
+  contributionAmount: number;
+  auctionAmount: number;
+}
+
 export interface ChitFundTemplate {
   id: number;
   name: string;
   totalAmount: number;
-  monthlyContribution: number;
+  monthlyContribution?: number;
   durationMonths: number;
   description?: string;
+  monthlySchedule?: TemplateMonthSchedule[];
   createdAt: string;
 }
 

@@ -103,7 +103,22 @@ const ChitFundTemplatesPage = () => {
       ),
     },
     { header: 'Total Amount', accessor: (row) => <span className="font-semibold text-slate-700">{fmt(row.totalAmount)}</span> },
-    { header: 'Monthly (₹)', accessor: (row) => fmt(row.monthlyContribution) },
+    {
+      header: 'Contribution (₹)',
+      accessor: (row) => {
+        if (row.monthlySchedule && row.monthlySchedule.length > 0) {
+          const amounts = row.monthlySchedule.map((s) => s.contributionAmount);
+          const min = Math.min(...amounts);
+          const max = Math.max(...amounts);
+          return (
+            <span className="font-semibold text-slate-700">
+              {min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`}
+            </span>
+          );
+        }
+        return <span className="text-slate-400 text-xs italic">Not set</span>;
+      },
+    },
     {
       header: 'Duration',
       accessor: (row) => (

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ArrowLeft, Loader2, AlertCircle, Edit2, Trash2,
-  LayoutTemplate, DollarSign, Calendar, Hash, AlignLeft,
+  LayoutTemplate, DollarSign, Calendar, Hash, AlignLeft, TableProperties,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ChitFundTemplateForm from '../components/chitfunds/ChitFundTemplateForm';
@@ -154,7 +154,6 @@ const ChitFundTemplateDetailPage = () => {
         </div>
 
         <InfoRow icon={DollarSign} label="Total Amount" value={fmt(template.totalAmount)} />
-        <InfoRow icon={DollarSign} label="Monthly Contribution" value={fmt(template.monthlyContribution)} />
         <InfoRow icon={Hash} label="Duration" value={`${template.durationMonths} months`} />
         <InfoRow icon={AlignLeft} label="Description" value={template.description} />
         <InfoRow
@@ -164,6 +163,50 @@ const ChitFundTemplateDetailPage = () => {
             day: '2-digit', month: 'long', year: 'numeric',
           })}
         />
+
+        {/* Monthly Schedule */}
+        {template.monthlySchedule && template.monthlySchedule.length > 0 && (
+          <div className="pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
+                <TableProperties size={15} className="text-slate-400" />
+              </div>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Monthly Schedule
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+              <div className="max-h-80 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Month</th>
+                      <th className="py-2.5 px-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Contribution</th>
+                      <th className="py-2.5 px-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Auction Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {template.monthlySchedule.map((row) => (
+                      <tr key={row.month} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-2.5 px-4 text-center">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
+                            {row.month}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-semibold text-slate-700">
+                          {fmt(row.contributionAmount)}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-semibold text-emerald-700">
+                          {fmt(row.auctionAmount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
