@@ -5,6 +5,13 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import MembersPage from './pages/MembersPage';
+import ChitFundsPage from './pages/ChitFundsPage';
+import ChitFundTemplatesPage from './pages/ChitFundTemplatesPage';
+import TransactionsPage from './pages/TransactionsPage';
+import MemberDetailPage from './pages/MemberDetailPage';
+import ChitFundDetailPage from './pages/ChitFundDetailPage';
+import ChitFundTemplateDetailPage from './pages/ChitFundTemplateDetailPage';
+import TransactionDetailPage from './pages/TransactionDetailPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -59,11 +66,16 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="members" element={<MembersPage />} />
-            
-            {/* Placeholders for other sections */}
+            <Route path="members/:id" element={<MemberDetailPage />} />
+            <Route path="chitfunds" element={<ChitFundsPage />} />
+            <Route path="chitfunds/:id" element={<ChitFundDetailPage />} />
+            <Route path="chitfund-templates" element={<ChitFundTemplatesPage />} />
+            <Route path="chitfund-templates/:id" element={<ChitFundTemplateDetailPage />} />
+            <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="transactions/:id" element={<TransactionDetailPage />} />
+
+            {/* Placeholder for Loans */}
             <Route path="loans" element={<div className="p-8 text-center text-slate-400">Loans Management Coming Soon</div>} />
-            <Route path="chitfunds" element={<div className="p-8 text-center text-slate-400">Chit Funds Management Coming Soon</div>} />
-            <Route path="transactions" element={<div className="p-8 text-center text-slate-400">Transactions Ledger Coming Soon</div>} />
           </Route>
 
           {/* Catch all */}

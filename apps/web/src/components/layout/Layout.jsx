@@ -5,6 +5,7 @@ import {
   Users, 
   BadgeDollarSign, 
   Coins, 
+  LayoutTemplate,
   ArrowLeftRight, 
   LogOut,
   UserCircle,
@@ -63,6 +64,7 @@ const Layout = () => {
             <MenuItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
             <MenuItem to="/loans" icon={BadgeDollarSign} label="Loans" />
             <MenuItem to="/chitfunds" icon={Coins} label="Chit Funds" />
+            <MenuItem to="/chitfund-templates" icon={LayoutTemplate} label="CF Templates" />
             <MenuItem to="/members" icon={Users} label="Members" />
             <MenuItem to="/transactions" icon={ArrowLeftRight} label="Transactions" />
           </nav>
