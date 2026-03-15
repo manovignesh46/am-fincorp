@@ -10,7 +10,9 @@ import ChitFundTemplatesPage from './pages/ChitFundTemplatesPage';
 import TransactionsPage from './pages/TransactionsPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import ChitFundDetailPage from './pages/ChitFundDetailPage';
+import ChitFundFormPage from './pages/ChitFundFormPage';
 import ChitFundTemplateDetailPage from './pages/ChitFundTemplateDetailPage';
+import ChitFundTemplateFormPage from './pages/ChitFundTemplateFormPage';
 import TransactionDetailPage from './pages/TransactionDetailPage';
 
 interface RouteProps {
@@ -72,9 +74,13 @@ function App() {
             <Route path="members" element={<MembersPage />} />
             <Route path="members/:id" element={<MemberDetailPage />} />
             <Route path="chitfunds" element={<ChitFundsPage />} />
+            <Route path="chitfunds/new" element={<ChitFundFormPage />} />
             <Route path="chitfunds/:id" element={<ChitFundDetailPage />} />
+            <Route path="chitfunds/:id/edit" element={<ChitFundFormPage />} />
             <Route path="chitfund-templates" element={<ChitFundTemplatesPage />} />
+            <Route path="chitfund-templates/new" element={<ChitFundTemplateFormPage />} />
             <Route path="chitfund-templates/:id" element={<ChitFundTemplateDetailPage />} />
+            <Route path="chitfund-templates/:id/edit" element={<ChitFundTemplateFormPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="transactions/:id" element={<TransactionDetailPage />} />
 

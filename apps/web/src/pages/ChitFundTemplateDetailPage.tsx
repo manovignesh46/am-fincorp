@@ -6,7 +6,7 @@ import {
   LayoutTemplate, DollarSign, Calendar, Hash, AlignLeft, TableProperties,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
-import ChitFundTemplateForm from '../components/chitfunds/ChitFundTemplateForm';
+import Button from '../components/ui/Button';
 import { ChitFundTemplate } from '../types';
 
 const fmt = (n: number) =>
@@ -39,7 +39,6 @@ const ChitFundTemplateDetailPage = () => {
   const [template, setTemplate] = useState<ChitFundTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,21 +60,6 @@ const ChitFundTemplateDetailPage = () => {
   };
 
   useEffect(() => { fetchTemplate(); }, [id]);
-
-  const handleEdit = async (formData: Record<string, unknown>) => {
-    try {
-      setIsSubmitting(true);
-      const res = await axios.put<{ data: ChitFundTemplate }>(`/chit-fund-templates/${id}`, formData);
-      setTemplate(res.data.data);
-      setIsEditModalOpen(false);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || 'Failed to update template.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -126,18 +110,8 @@ const ChitFundTemplateDetailPage = () => {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{template.name}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-          >
-            <Edit2 size={15} /> Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold rounded-xl border border-rose-200 transition-colors"
-          >
-            <Trash2 size={15} /> Delete
-          </button>
+          <Button onClick={() => navigate(`/chitfund-templates/${id}/edit`)} icon={Edit2} label="Edit" hideLabel />
+          <Button onClick={() => setIsDeleteModalOpen(true)} icon={Trash2} label="Delete" hideLabel variant="danger-outline" />
         </div>
       </div>
 
@@ -208,15 +182,6 @@ const ChitFundTemplateDetailPage = () => {
           </div>
         )}
       </div>
-
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => !isSubmitting && setIsEditModalOpen(false)}
-        title="Edit Template"
-      >
-        <ChitFundTemplateForm onSubmit={handleEdit} isLoading={isSubmitting} initialData={template} />
-      </Modal>
 
       {/* Delete Confirmation */}
       <Modal

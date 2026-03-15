@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
 import DataTable, { Column } from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
-import ChitFundTemplateForm from '../components/chitfunds/ChitFundTemplateForm';
+import Button from '../components/ui/Button';
 import { ChitFundTemplate } from '../types';
 
 const fmt = (n: number) =>
@@ -17,9 +17,8 @@ const ChitFundTemplatesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ChitFundTemplate | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ChitFundTemplate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchTemplates = async () => {
@@ -40,38 +39,9 @@ const ChitFundTemplatesPage = () => {
     fetchTemplates();
   }, []);
 
-  const handleOpenAddModal = () => {
-    setSelectedTemplate(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (template: ChitFundTemplate) => {
-    setSelectedTemplate(template);
-    setIsModalOpen(true);
-  };
-
   const handleOpenDeleteModal = (template: ChitFundTemplate) => {
     setSelectedTemplate(template);
     setIsDeleteModalOpen(true);
-  };
-
-  const handleAddOrEdit = async (formData: Record<string, unknown>) => {
-    try {
-      setIsSubmitting(true);
-      if (selectedTemplate) {
-        await axios.put(`/chit-fund-templates/${selectedTemplate.id}`, formData);
-      } else {
-        await axios.post('/chit-fund-templates', formData);
-      }
-      await fetchTemplates();
-      setIsModalOpen(false);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || 'Failed to save template');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -130,21 +100,9 @@ const ChitFundTemplatesPage = () => {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit Template"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }}
-            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-            title="Delete Template"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="flex items-center gap-1">
+          <Button onClick={(e) => { e.stopPropagation(); navigate(`/chitfund-templates/${row.id}/edit`); }} icon={Edit2} label="Edit Template" alwaysIconOnly variant="ghost-blue" size="sm" />
+          <Button onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }} icon={Trash2} label="Delete Template" alwaysIconOnly variant="ghost-red" size="sm" />
         </div>
       ),
     },
@@ -156,15 +114,12 @@ const ChitFundTemplatesPage = () => {
 
   return (
     <div className="p-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Chit Fund Templates</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Define reusable blueprints for chit fund schemes.</p>
         </div>
-        <button onClick={handleOpenAddModal} className="flex items-center gap-2 btn-primary">
-          <Plus size={18} />
-          <span>New Template</span>
-        </button>
+        <Button onClick={() => navigate('/chitfund-templates/new')} icon={Plus} label="New Template" hideLabel />
       </div>
 
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3 group focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
@@ -195,7 +150,7 @@ const ChitFundTemplatesPage = () => {
           </button>
         </div>
       ) : (
-        <div className="card-clean overflow-hidden">
+        <div className="card-clean">
           <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfund-templates/${row.id}`)} />
           {filtered.length === 0 && (
             <div className="py-20 text-center text-slate-400 font-medium">
@@ -204,15 +159,6 @@ const ChitFundTemplatesPage = () => {
           )}
         </div>
       )}
-
-      {/* Add / Edit Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => !isSubmitting && setIsModalOpen(false)}
-        title={selectedTemplate ? 'Edit Template' : 'New Chit Fund Template'}
-      >
-        <ChitFundTemplateForm onSubmit={handleAddOrEdit} isLoading={isSubmitting} initialData={selectedTemplate} />
-      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

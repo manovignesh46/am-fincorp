@@ -7,7 +7,7 @@ import {
   UserPlus, Users, UserMinus, Phone, Ticket,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
-import ChitFundForm from '../components/chitfunds/ChitFundForm';
+import Button from '../components/ui/Button';
 import { ChitFund, ChitFundStatus, ChitFundEnrollment, Member } from '../types';
 
 const STATUS_STYLES: Record<ChitFundStatus, string> = {
@@ -47,7 +47,6 @@ const ChitFundDetailPage = () => {
   const [fund, setFund] = useState<ChitFund | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -146,21 +145,6 @@ const ChitFundDetailPage = () => {
 
   useEffect(() => { fetchFund(); fetchEnrollments(); }, [id]);
 
-  const handleEdit = async (formData: Record<string, unknown>) => {
-    try {
-      setIsSubmitting(true);
-      const res = await axios.put<{ data: ChitFund }>(`/chit-funds/${id}`, formData);
-      setFund(res.data.data);
-      setIsEditModalOpen(false);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || 'Failed to update chit fund.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDelete = async () => {
     try {
       setIsSubmitting(true);
@@ -216,18 +200,8 @@ const ChitFundDetailPage = () => {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{fund.name}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-          >
-            <Edit2 size={15} /> Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold rounded-xl border border-rose-200 transition-colors"
-          >
-            <Trash2 size={15} /> Delete
-          </button>
+          <Button onClick={() => navigate(`/chitfunds/${id}/edit`)} icon={Edit2} label="Edit" hideLabel />
+          <Button onClick={() => setIsDeleteModalOpen(true)} icon={Trash2} label="Delete" hideLabel variant="danger-outline" />
         </div>
       </div>
 
@@ -306,12 +280,7 @@ const ChitFundDetailPage = () => {
                 )}
               </h3>
             </div>
-            <button
-              onClick={openAddMemberModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-            >
-              <UserPlus size={14} /> Add Member
-            </button>
+            <Button onClick={openAddMemberModal} icon={UserPlus} label="Add Member" hideLabel variant="success" size="sm" />
           </div>
 
           {enrollmentsLoading ? (
@@ -463,16 +432,6 @@ const ChitFundDetailPage = () => {
             </button>
           </div>
         </form>
-      </Modal>
-
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => !isSubmitting && setIsEditModalOpen(false)}
-        title="Edit Chit Fund"
-        maxWidth="max-w-lg"
-      >
-        <ChitFundForm onSubmit={handleEdit} isLoading={isSubmitting} initialData={fund} />
       </Modal>
 
       {/* Delete Confirmation */}

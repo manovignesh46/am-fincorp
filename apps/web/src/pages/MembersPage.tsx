@@ -4,6 +4,7 @@ import axios from 'axios';
 import { UserPlus, Search, AlertCircle, Loader2, Edit2, Trash2 } from 'lucide-react';
 import DataTable from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import MemberForm from '../components/members/MemberForm';
 import { Member } from '../types';
 import { Column } from '../components/ui/DataTable';
@@ -115,21 +116,9 @@ const MembersPage = () => {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit Member"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }}
-            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-            title="Delete Member"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="flex items-center gap-1">
+          <Button onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }} icon={Edit2} label="Edit Member" alwaysIconOnly variant="ghost-blue" size="sm" />
+          <Button onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }} icon={Trash2} label="Delete Member" alwaysIconOnly variant="ghost-red" size="sm" />
         </div>
       ),
     },
@@ -143,15 +132,12 @@ const MembersPage = () => {
 
   return (
     <div className="p-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Member Directory</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Create, update, and manage all participants.</p>
         </div>
-        <button onClick={handleOpenAddModal} className="flex items-center gap-2 btn-primary">
-          <UserPlus size={18} />
-          <span>Add Member</span>
-        </button>
+        <Button onClick={handleOpenAddModal} icon={UserPlus} label="Add Member" hideLabel />
       </div>
 
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3 group focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
@@ -182,7 +168,7 @@ const MembersPage = () => {
           </button>
         </div>
       ) : (
-        <div className="card-clean overflow-hidden">
+        <div className="card-clean">
           <DataTable columns={columns} data={filteredMembers} onRowClick={(row) => navigate(`/members/${row.id}`)} />
           {filteredMembers.length === 0 && (
             <div className="py-20 text-center text-slate-400 font-medium">

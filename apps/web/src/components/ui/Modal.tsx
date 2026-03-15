@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -20,24 +21,46 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: Moda
       window.addEventListener('keydown', handleEscape);
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  // Stop touch events from bubbling through the React portal tree to Layout's
+  // swipe gesture handlers — otherwise any touch inside the modal triggers the
+  // sidebar-open logic.
+  const stopTouch = (e: React.TouchEvent) => e.stopPropagation();
+
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-6"
+      onTouchStart={stopTouch}
+      onTouchMove={stopTouch}
+      onTouchEnd={stopTouch}
+    >
+      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200"
         onClick={onClose}
       />
+      {/* Dialog — tall bottom-sheet on mobile (88 vh), centered card on sm+ */}
       <div className={cn(
-        'relative bg-white w-full rounded-2xl shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]',
+        'relative bg-white w-full flex flex-col',
+        'rounded-t-2xl sm:rounded-2xl',
+        'shadow-2xl border border-slate-200',
+        'animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200',
+        // Mobile: fill 88% of screen height so form is immediately visible + scrolls inside
+        'h-[88vh] sm:h-auto sm:max-h-[90vh]',
+        'sm:max-w-[calc(100vw-3rem)]',
         maxWidth
       )}>
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+        {/* Drag handle (mobile only) */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
+        </div>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
           <h3 className="text-lg font-bold text-slate-900 leading-none">{title}</h3>
           <button
             onClick={onClose}
@@ -46,11 +69,12 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: Moda
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

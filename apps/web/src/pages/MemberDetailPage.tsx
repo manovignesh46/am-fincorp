@@ -6,6 +6,7 @@ import {
   User, Phone, Mail, MapPin, StickyNote, Calendar,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import MemberForm from '../components/members/MemberForm';
 import { Member } from '../types';
 
@@ -123,18 +124,8 @@ const MemberDetailPage = () => {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{member.name}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-          >
-            <Edit2 size={15} /> Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold rounded-xl border border-rose-200 transition-colors"
-          >
-            <Trash2 size={15} /> Delete
-          </button>
+          <Button onClick={() => setIsEditModalOpen(true)} icon={Edit2} label="Edit" hideLabel />
+          <Button onClick={() => setIsDeleteModalOpen(true)} icon={Trash2} label="Delete" hideLabel variant="danger-outline" />
         </div>
       </div>
 

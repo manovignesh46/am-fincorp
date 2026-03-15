@@ -47,6 +47,9 @@
   #root {
     height: 100%;
     width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
     margin: 0;
     padding: 0;
   }
@@ -62,11 +65,11 @@
 
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-[var(--radius-main)] hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm active:scale-[0.98];
+    @apply inline-flex items-center px-4 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-[var(--radius-main)] hover:bg-[var(--color-primary-dark)] transition-colors shadow-sm active:scale-[0.98];
   }
 
   .card-clean {
-    @apply bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-main)] shadow-sm;
+    @apply w-full max-w-full bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-main)] shadow-sm overflow-hidden;
   }
 }
 

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { AlertCircle, Loader2, Plus, TrendingUp, TrendingDown, Scale } from 'lucide-react';
 import DataTable, { Column } from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import TransactionForm from '../components/transactions/TransactionForm';
 import { Transaction, TransactionNature, TransactionCategory, TransactionSummary } from '../types';
 
@@ -150,17 +151,14 @@ const TransactionsPage = () => {
 
   return (
     <div className="p-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Transaction Ledger</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">
             Immutable double-entry record of all financial movements.
           </p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 btn-primary">
-          <Plus size={18} />
-          <span>Record Transaction</span>
-        </button>
+        <Button onClick={() => setIsModalOpen(true)} icon={Plus} label="Record Transaction" hideLabel />
       </div>
 
       {/* Summary cards */}
@@ -234,7 +232,7 @@ const TransactionsPage = () => {
           </button>
         </div>
       ) : (
-        <div className="card-clean overflow-hidden">
+        <div className="card-clean">
           <DataTable columns={columns} data={transactions} onRowClick={(row) => navigate(`/transactions/${row.id}`)} />
           {transactions.length === 0 && (
             <div className="py-20 text-center text-slate-400 font-medium">

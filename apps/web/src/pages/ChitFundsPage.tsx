@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
 import DataTable, { Column } from '../components/ui/DataTable';
 import Modal from '../components/ui/Modal';
-import ChitFundForm from '../components/chitfunds/ChitFundForm';
+import Button from '../components/ui/Button';
 import { ChitFund, ChitFundStatus } from '../types';
 
 const fmt = (n: number) =>
@@ -24,9 +24,8 @@ const ChitFundsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFund, setSelectedFund] = useState<ChitFund | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedFund, setSelectedFund] = useState<ChitFund | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchChitFunds = async () => {
@@ -47,38 +46,9 @@ const ChitFundsPage = () => {
     fetchChitFunds();
   }, []);
 
-  const handleOpenAddModal = () => {
-    setSelectedFund(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (fund: ChitFund) => {
-    setSelectedFund(fund);
-    setIsModalOpen(true);
-  };
-
   const handleOpenDeleteModal = (fund: ChitFund) => {
     setSelectedFund(fund);
     setIsDeleteModalOpen(true);
-  };
-
-  const handleAddOrEdit = async (formData: Record<string, unknown>) => {
-    try {
-      setIsSubmitting(true);
-      if (selectedFund) {
-        await axios.put(`/chit-funds/${selectedFund.id}`, formData);
-      } else {
-        await axios.post('/chit-funds', formData);
-      }
-      await fetchChitFunds();
-      setIsModalOpen(false);
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || 'Failed to save chit fund');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -141,21 +111,9 @@ const ChitFundsPage = () => {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenEditModal(row); }}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }}
-            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="flex items-center gap-1">
+          <Button onClick={(e) => { e.stopPropagation(); navigate(`/chitfunds/${row.id}/edit`); }} icon={Edit2} label="Edit" alwaysIconOnly variant="ghost-blue" size="sm" />
+          <Button onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(row); }} icon={Trash2} label="Delete" alwaysIconOnly variant="ghost-red" size="sm" />
         </div>
       ),
     },
@@ -167,15 +125,12 @@ const ChitFundsPage = () => {
 
   return (
     <div className="p-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Chit Funds</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Manage active and past chit fund schemes.</p>
         </div>
-        <button onClick={handleOpenAddModal} className="flex items-center gap-2 btn-primary">
-          <Plus size={18} />
-          <span>New Chit Fund</span>
-        </button>
+        <Button onClick={() => navigate('/chitfunds/new')} icon={Plus} label="New Chit Fund" hideLabel />
       </div>
 
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-3 group focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
@@ -206,7 +161,7 @@ const ChitFundsPage = () => {
           </button>
         </div>
       ) : (
-        <div className="card-clean overflow-hidden">
+        <div className="card-clean">
           <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfunds/${row.id}`)} />
           {filtered.length === 0 && (
             <div className="py-20 text-center text-slate-400 font-medium">
@@ -215,16 +170,6 @@ const ChitFundsPage = () => {
           )}
         </div>
       )}
-
-      {/* Add / Edit Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => !isSubmitting && setIsModalOpen(false)}
-        title={selectedFund ? 'Edit Chit Fund' : 'New Chit Fund'}
-        maxWidth="max-w-lg"
-      >
-        <ChitFundForm onSubmit={handleAddOrEdit} isLoading={isSubmitting} initialData={selectedFund} />
-      </Modal>
 
       {/* Delete Confirmation */}
       <Modal

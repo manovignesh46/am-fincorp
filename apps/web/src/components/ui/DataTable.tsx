@@ -4,6 +4,8 @@ import { cn } from '../../utils/cn';
 export interface Column<T = Record<string, unknown>> {
   header: string;
   accessor: ((row: T) => React.ReactNode) | string;
+  /** Hide this column on mobile (< md). Use for secondary/detail columns. */
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T = Record<string, unknown>> {
@@ -20,12 +22,18 @@ const DataTable = <T = Record<string, unknown>>({
   onRowClick,
 }: DataTableProps<T>) => {
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm', className)}>
-      <table className="w-full text-left text-sm text-slate-600">
+    <div className={cn('w-full overflow-x-auto overscroll-x-contain rounded-lg border border-slate-200 bg-white shadow-sm', className)}>
+      <table className="min-w-full text-left text-sm text-slate-600">
         <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
           <tr>
             {columns.map((column, index) => (
-              <th key={index} className="px-6 py-4">
+              <th
+                key={index}
+                className={cn(
+                  'px-3 py-3 md:px-6 md:py-4 whitespace-nowrap',
+                  column.hideOnMobile && 'hidden md:table-cell'
+                )}
+              >
                 {column.header}
               </th>
             ))}
@@ -43,7 +51,13 @@ const DataTable = <T = Record<string, unknown>>({
                 )}
               >
                 {columns.map((column, colIndex) => (
-                  <td key={colIndex} className="px-6 py-4">
+                  <td
+                    key={colIndex}
+                    className={cn(
+                      'px-3 py-3 md:px-6 md:py-4',
+                      column.hideOnMobile && 'hidden md:table-cell'
+                    )}
+                  >
                     {typeof column.accessor === 'function'
                       ? column.accessor(row)
                       : (row as Record<string, unknown>)[column.accessor] as React.ReactNode}
@@ -53,7 +67,7 @@ const DataTable = <T = Record<string, unknown>>({
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length} className="px-6 py-10 text-center text-slate-400">
+              <td colSpan={columns.filter(c => !c.hideOnMobile).length} className="px-3 py-10 text-center text-slate-400">
                 No data available
               </td>
             </tr>
