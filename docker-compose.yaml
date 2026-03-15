@@ -1,0 +1,48 @@
+services:
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: am_fincorp_db
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: am_fincorp
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: am_fincorp_api
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./apps/api/.env
+    environment:
+      - DATABASE_URL=postgresql://neondb_owner:npg_1dHUbcClOP3S@ep-royal-shape-a8weg8xz-pooler.eastus2.azure.neon.tech/am_fincorp_new?sslmode=require
+      - PORT=5000
+      - NODE_ENV=production
+      - JWT_SECRET=your_jwt_secret_here
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: am_fincorp_web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

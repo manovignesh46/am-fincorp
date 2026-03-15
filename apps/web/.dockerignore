@@ -1,0 +1,8 @@
+node_modules
+dist
+.npm
+.pnpm-store
+*.log
+.env
+.git
+.vscode
