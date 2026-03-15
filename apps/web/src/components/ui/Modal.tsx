@@ -53,7 +53,6 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: Moda
         'animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200',
         // Mobile: fill 88% of screen height so form is immediately visible + scrolls inside
         'h-[88vh] sm:h-auto sm:max-h-[90vh]',
-        'sm:max-w-[calc(100vw-3rem)]',
         maxWidth
       )}>
         {/* Drag handle (mobile only) */}

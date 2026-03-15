@@ -1,4 +1,4 @@
-import { ChitFund, ChitFundTemplate, ChitFundEnrollment, Member, sequelize } from '@am-fincorp/database';
+import { ChitFund, ChitFundTemplate, ChitFundEnrollment, Member, Contribution, Auction, Transaction, sequelize } from '@am-fincorp/database';
 
 class ChitFundService {
   async createChitFund(chitFundData: Record<string, unknown>): Promise<any> {
@@ -109,6 +109,142 @@ class ChitFundService {
       await enrollment.destroy();
     } catch (error) {
       console.error(`Error removing enrollment ${enrollmentId}:`, error);
+      throw error;
+    }
+  }
+
+  // ── Contributions ──────────────────────────────────────────────────────────
+
+  async getContributions(chitFundId: string): Promise<any[]> {
+    try {
+      return await Contribution.findAll({
+        include: [{
+          model: ChitFundEnrollment,
+          where: { chitFundId },
+          include: [{ model: Member, attributes: ['id', 'name'] }],
+        }],
+        order: [['month', 'ASC'], ['createdAt', 'ASC']],
+      });
+    } catch (error) {
+      console.error(`Error fetching contributions for ChitFund ${chitFundId}:`, error);
+      throw new Error('Could not fetch contributions');
+    }
+  }
+
+  async recordContribution(
+    chitFundId: string,
+    data: { enrollmentId: number; month: number; amount: number; paidDate?: string; note?: string },
+    userId: number
+  ): Promise<any> {
+    const t = await sequelize.transaction();
+    try {
+      const enrollment = await ChitFundEnrollment.findOne({ where: { id: data.enrollmentId, chitFundId } } as any);
+      if (!enrollment) throw new Error('Enrollment not found for this chit fund');
+
+      const txnDate = data.paidDate ? new Date(data.paidDate) : new Date();
+
+      // Create a CREDIT ledger entry for the logged-in partner
+      const ledgerTxn = await Transaction.create({
+        nature: 'CREDIT',
+        category: 'CHIT_CONTRIBUTION',
+        amount: data.amount,
+        date: txnDate,
+        note: data.note || null,
+        userId,
+      } as any, { transaction: t });
+
+      const contribution = await Contribution.create({
+        enrollmentId: data.enrollmentId,
+        month: data.month,
+        amount: data.amount,
+        paidDate: data.paidDate || null,
+        status: 'PAID',
+        transactionId: (ledgerTxn as any).id,
+      } as any, { transaction: t });
+
+      await t.commit();
+      return await Contribution.findByPk((contribution as any).id, {
+        include: [{
+          model: ChitFundEnrollment,
+          include: [{ model: Member, attributes: ['id', 'name', 'contact'] }],
+        }],
+      });
+    } catch (error) {
+      await t.rollback();
+      console.error(`Error recording contribution for ChitFund ${chitFundId}:`, error);
+      throw error;
+    }
+  }
+
+  // ── Auctions ───────────────────────────────────────────────────────────────
+
+  async getAuctions(chitFundId: string): Promise<any[]> {
+    try {
+      return await Auction.findAll({
+        where: { chitFundId },
+        include: [{
+          model: ChitFundEnrollment,
+          as: 'winner',
+          include: [{ model: Member, attributes: ['id', 'name'] }],
+        }],
+        order: [['auctionMonth', 'ASC']],
+      });
+    } catch (error) {
+      console.error(`Error fetching auctions for ChitFund ${chitFundId}:`, error);
+      throw new Error('Could not fetch auctions');
+    }
+  }
+
+  async recordAuction(
+    chitFundId: string,
+    data: { winnerEnrollmentId: number; auctionMonth: number; payoutAmount: number; auctionDate?: string; note?: string },
+    userId: number
+  ): Promise<any> {
+    const t = await sequelize.transaction();
+    try {
+      const enrollment = (await ChitFundEnrollment.findOne({ where: { id: data.winnerEnrollmentId, chitFundId } } as any)) as any;
+      if (!enrollment) throw new Error('Enrollment not found for this chit fund');
+
+      const txnDate = data.auctionDate ? new Date(data.auctionDate) : new Date();
+
+      // Create a DEBIT ledger entry for the payout to the auction winner
+      const ledgerTxn = await Transaction.create({
+        nature: 'DEBIT',
+        category: 'AUCTION_PAYOUT',
+        amount: data.payoutAmount,
+        date: txnDate,
+        note: data.note || null,
+        userId,
+      } as any, { transaction: t });
+
+      const auction = await Auction.create({
+        chitFundId,
+        winnerEnrollmentId: data.winnerEnrollmentId,
+        auctionMonth: data.auctionMonth,
+        auctionDate: data.auctionDate || null,
+        bidAmount: null,
+        payoutAmount: data.payoutAmount,
+        status: 'COMPLETED',
+        disbursementTransactionId: (ledgerTxn as any).id,
+      } as any, { transaction: t });
+
+      // Mark the winner's enrollment as auction won
+      await enrollment.update(
+        { auctionWon: true, auctionMonth: data.auctionMonth },
+        { transaction: t }
+      );
+
+      await t.commit();
+      return await Auction.findByPk((auction as any).id, {
+        include: [{
+          model: ChitFundEnrollment,
+          as: 'winner',
+          include: [{ model: Member, attributes: ['id', 'name', 'contact'] }],
+        }],
+      });
+    } catch (error) {
+      await t.rollback();
+      console.error(`Error recording auction for ChitFund ${chitFundId}:`, error);
       throw error;
     }
   }

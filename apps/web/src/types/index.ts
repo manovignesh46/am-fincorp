@@ -48,7 +48,7 @@ export interface ChitFund {
   startDate: string;
   status: ChitFundStatus;
   templateId?: number | null;
-  ChitFundTemplate?: Pick<ChitFundTemplate, 'id' | 'name'>;
+  ChitFundTemplate?: Pick<ChitFundTemplate, 'id' | 'name' | 'monthlySchedule'>;
   createdAt: string;
 }
 
@@ -65,6 +65,42 @@ export interface ChitFundEnrollment {
   auctionMonth?: number | null;
   status: EnrollmentStatus;
   Member?: Pick<Member, 'id' | 'name' | 'contact' | 'email'>;
+  createdAt: string;
+}
+
+// ─── Chit Fund Contribution ───────────────────────────────────────────────────
+export interface ChitFundContribution {
+  id: number;
+  enrollmentId: number;
+  month: number;
+  amount: number;
+  paidDate?: string | null;
+  status: 'PAID' | 'PENDING' | 'OVERDUE';
+  transactionId?: number;
+  ChitFundEnrollment?: {
+    id: number;
+    ticketNumber?: number | null;
+    Member?: Pick<Member, 'id' | 'name'>;
+  };
+  createdAt: string;
+}
+
+// ─── Chit Fund Auction ────────────────────────────────────────────────────────
+export interface ChitFundAuction {
+  id: number;
+  chitFundId: number;
+  auctionMonth: number;
+  auctionDate?: string | null;
+  bidAmount?: number | null;
+  payoutAmount: number;
+  status: 'COMPLETED' | 'PENDING';
+  winnerEnrollmentId?: number;
+  winner?: {
+    id: number;
+    ticketNumber?: number | null;
+    Member?: Pick<Member, 'id' | 'name'>;
+  };
+  disbursementTransactionId?: number;
   createdAt: string;
 }
 

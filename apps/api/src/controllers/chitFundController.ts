@@ -114,6 +114,66 @@ class ChitFundController {
       res.status(status).json({ success: false, message: (error as Error).message });
     }
   }
+
+  async getContributions(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await chitFundService.getContributions(req.params.id);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  async recordContribution(req: Request, res: Response): Promise<void> {
+    try {
+      const { enrollmentId, month, amount, paidDate, note } = req.body;
+      if (!enrollmentId || !month || !amount) {
+        res.status(400).json({ success: false, message: 'enrollmentId, month, and amount are required' });
+        return;
+      }
+      const data = await chitFundService.recordContribution(
+        req.params.id,
+        { enrollmentId: Number(enrollmentId), month: Number(month), amount: Number(amount), paidDate, note },
+        req.user!.id
+      );
+      res.status(201).json({ success: true, data });
+    } catch (error) {
+      res.status(400).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  async getAuctions(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await chitFundService.getAuctions(req.params.id);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  async recordAuction(req: Request, res: Response): Promise<void> {
+    try {
+      const { winnerEnrollmentId, auctionMonth, payoutAmount, auctionDate, note } = req.body;
+      if (!winnerEnrollmentId || !auctionMonth || !payoutAmount) {
+        res.status(400).json({ success: false, message: 'winnerEnrollmentId, auctionMonth, and payoutAmount are required' });
+        return;
+      }
+      const data = await chitFundService.recordAuction(
+        req.params.id,
+        {
+          winnerEnrollmentId: Number(winnerEnrollmentId),
+          auctionMonth: Number(auctionMonth),
+          payoutAmount: Number(payoutAmount),
+          auctionDate,
+          note,
+        },
+        req.user!.id
+      );
+      res.status(201).json({ success: true, data });
+    } catch (error) {
+      res.status(400).json({ success: false, message: (error as Error).message });
+    }
+  }
 }
 
 export default new ChitFundController();

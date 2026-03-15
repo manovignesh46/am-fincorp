@@ -5,10 +5,11 @@ import {
   ArrowLeft, Loader2, AlertCircle, Edit2, Trash2,
   Coins, Calendar, TrendingUp, Hash, Activity, LayoutTemplate,
   UserPlus, Users, UserMinus, Phone, Ticket,
+  Receipt, Gavel, Plus, CheckCircle2,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
-import { ChitFund, ChitFundStatus, ChitFundEnrollment, Member } from '../types';
+import { ChitFund, ChitFundStatus, ChitFundEnrollment, Member, ChitFundContribution, ChitFundAuction } from '../types';
 
 const STATUS_STYLES: Record<ChitFundStatus, string> = {
   ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -62,6 +63,30 @@ const ChitFundDetailPage = () => {
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
 
+  // ── Contributions state ─────────────────────────────────────────────────
+  const [contributions, setContributions] = useState<ChitFundContribution[]>([]);
+  const [contributionsLoading, setContributionsLoading] = useState(false);
+  const [isRecordContribOpen, setIsRecordContribOpen] = useState(false);
+  const [contribEnrollmentId, setContribEnrollmentId] = useState('');
+  const [contribMonth, setContribMonth] = useState('');
+  const [contribAmount, setContribAmount] = useState('');
+  const [contribPaidDate, setContribPaidDate] = useState('');
+  const [contribNote, setContribNote] = useState('');
+  const [recordingContrib, setRecordingContrib] = useState(false);
+  const [contribError, setContribError] = useState<string | null>(null);
+
+  // ── Auctions state ──────────────────────────────────────────────────────
+  const [auctions, setAuctions] = useState<ChitFundAuction[]>([]);
+  const [auctionsLoading, setAuctionsLoading] = useState(false);
+  const [isRecordAuctionOpen, setIsRecordAuctionOpen] = useState(false);
+  const [auctionWinnerEnrollmentId, setAuctionWinnerEnrollmentId] = useState('');
+  const [auctionMonth, setAuctionMonth] = useState('');
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [auctionDateStr, setAuctionDateStr] = useState('');
+  const [auctionNote, setAuctionNote] = useState('');
+  const [recordingAuction, setRecordingAuction] = useState(false);
+  const [auctionError, setAuctionError] = useState<string | null>(null);
+
   const fetchFund = async () => {
     try {
       setLoading(true);
@@ -88,6 +113,30 @@ const ChitFundDetailPage = () => {
       // non-blocking
     } finally {
       setEnrollmentsLoading(false);
+    }
+  };
+
+  const fetchContributions = async () => {
+    try {
+      setContributionsLoading(true);
+      const res = await axios.get<{ data: ChitFundContribution[] }>(`/chit-funds/${id}/contributions`);
+      setContributions(res.data.data);
+    } catch {
+      // non-blocking
+    } finally {
+      setContributionsLoading(false);
+    }
+  };
+
+  const fetchAuctions = async () => {
+    try {
+      setAuctionsLoading(true);
+      const res = await axios.get<{ data: ChitFundAuction[] }>(`/chit-funds/${id}/auctions`);
+      setAuctions(res.data.data);
+    } catch {
+      // non-blocking
+    } finally {
+      setAuctionsLoading(false);
     }
   };
 
@@ -143,7 +192,93 @@ const ChitFundDetailPage = () => {
     }
   };
 
-  useEffect(() => { fetchFund(); fetchEnrollments(); }, [id]);
+  const calcCurrentMonth = (fund: ChitFund): number => {
+    const start = new Date(fund.startDate);
+    const now = new Date();
+    const diff = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
+    return Math.max(1, Math.min(diff, fund.duration));
+  };
+
+  const openRecordContribModal = (currentFund: ChitFund) => {
+    const schedule = currentFund.ChitFundTemplate?.monthlySchedule ?? [];
+    const monthNum = calcCurrentMonth(currentFund);
+    const entry = schedule.find((s) => s.month === monthNum);
+    setContribEnrollmentId('');
+    setContribMonth(String(monthNum));
+    setContribAmount(String(entry?.contributionAmount ?? currentFund.monthlyContribution));
+    setContribPaidDate(new Date().toISOString().split('T')[0]);
+    setContribNote('');
+    setContribError(null);
+    setIsRecordContribOpen(true);
+  };
+
+  const handleRecordContribution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setRecordingContrib(true);
+      setContribError(null);
+      const res = await axios.post<{ data: ChitFundContribution }>(`/chit-funds/${id}/contributions`, {
+        enrollmentId: Number(contribEnrollmentId),
+        month: Number(contribMonth),
+        amount: Number(contribAmount),
+        paidDate: contribPaidDate || undefined,
+        note: contribNote || undefined,
+      });
+      setContributions((prev) => [...prev, res.data.data].sort((a, b) => a.month - b.month));
+      setIsRecordContribOpen(false);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setContribError(err.response?.data?.message || 'Failed to record contribution.');
+      }
+    } finally {
+      setRecordingContrib(false);
+    }
+  };
+
+  const openRecordAuctionModal = (currentFund: ChitFund) => {
+    const schedule = currentFund.ChitFundTemplate?.monthlySchedule ?? [];
+    const monthNum = calcCurrentMonth(currentFund);
+    const entry = schedule.find((s) => s.month === monthNum);
+    setAuctionWinnerEnrollmentId('');
+    setAuctionMonth(String(monthNum));
+    setPayoutAmount(String(entry?.auctionAmount ?? currentFund.totalAmount));
+    setAuctionDateStr(new Date().toISOString().split('T')[0]);
+    setAuctionNote('');
+    setAuctionError(null);
+    setIsRecordAuctionOpen(true);
+  };
+
+  const handleRecordAuction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setRecordingAuction(true);
+      setAuctionError(null);
+      const res = await axios.post<{ data: ChitFundAuction }>(`/chit-funds/${id}/auctions`, {
+        winnerEnrollmentId: Number(auctionWinnerEnrollmentId),
+        auctionMonth: Number(auctionMonth),
+        payoutAmount: Number(payoutAmount),
+        auctionDate: auctionDateStr || undefined,
+        note: auctionNote || undefined,
+      });
+      setAuctions((prev) => [...prev, res.data.data].sort((a, b) => a.auctionMonth - b.auctionMonth));
+      setEnrollments((prev) =>
+        prev.map((e) =>
+          e.id === Number(auctionWinnerEnrollmentId)
+            ? { ...e, auctionWon: true, auctionMonth: Number(auctionMonth) }
+            : e
+        )
+      );
+      setIsRecordAuctionOpen(false);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setAuctionError(err.response?.data?.message || 'Failed to record auction.');
+      }
+    } finally {
+      setRecordingAuction(false);
+    }
+  };
+
+  useEffect(() => { fetchFund(); fetchEnrollments(); fetchContributions(); fetchAuctions(); }, [id]);
 
   const handleDelete = async () => {
     try {
@@ -356,6 +491,153 @@ const ChitFundDetailPage = () => {
         </div>
       </div>
 
+      {/* ── Monthly Contributions & Auctions ─────────────────────────────────── */}
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Contributions */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Receipt size={18} className="text-slate-400" />
+              <h3 className="text-sm font-bold text-slate-800">
+                Contributions
+                {contributions.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-bold">
+                    {contributions.length}
+                  </span>
+                )}
+              </h3>
+            </div>
+            <button
+              onClick={() => openRecordContribModal(fund)}
+              disabled={enrollments.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
+            >
+              <Plus size={14} /> Record
+            </button>
+          </div>
+          {contributionsLoading ? (
+            <div className="flex items-center justify-center py-10 text-slate-400">
+              <Loader2 className="animate-spin mr-2" size={18} /> Loading...
+            </div>
+          ) : contributions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+              <Receipt size={36} className="mb-2 opacity-20" />
+              <p className="text-sm font-medium">No contributions recorded yet</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-16">Month</th>
+                    <th className="py-2 px-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Member</th>
+                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {contributions.map((c) => (
+                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
+                          {c.month}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-700">
+                        {c.ChitFundEnrollment?.Member?.name ?? '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                        {fmt(c.amount)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                          c.status === 'PAID'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : c.status === 'PENDING'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-rose-50 text-rose-600 border-rose-200'
+                        }`}>
+                          {c.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Auctions */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Gavel size={18} className="text-slate-400" />
+              <h3 className="text-sm font-bold text-slate-800">
+                Monthly Auctions
+                {auctions.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-full font-bold">
+                    {auctions.length}
+                  </span>
+                )}
+              </h3>
+            </div>
+            <button
+              onClick={() => openRecordAuctionModal(fund)}
+              disabled={enrollments.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
+            >
+              <Plus size={14} /> Record
+            </button>
+          </div>
+          {auctionsLoading ? (
+            <div className="flex items-center justify-center py-10 text-slate-400">
+              <Loader2 className="animate-spin mr-2" size={18} /> Loading...
+            </div>
+          ) : auctions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+              <Gavel size={36} className="mb-2 opacity-20" />
+              <p className="text-sm font-medium">No auctions recorded yet</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-16">Month</th>
+                    <th className="py-2 px-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Winner</th>
+                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Bid</th>
+                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Payout</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auctions.map((a) => (
+                    <tr key={a.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">
+                          {a.auctionMonth}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-700">
+                        {a.winner?.Member?.name ?? '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                        {a.bidAmount != null ? fmt(a.bidAmount) : '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
+                        {fmt(a.payoutAmount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+      </div>
+
       {/* ── Add Member Modal ──────────────────────────────────────────────────── */}
       <Modal
         isOpen={isAddMemberModalOpen}
@@ -429,6 +711,223 @@ const ChitFundDetailPage = () => {
             >
               {addingMember ? <Loader2 className="animate-spin" size={16} /> : <UserPlus size={16} />}
               {addingMember ? 'Adding...' : 'Add Member'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Record Contribution Modal ─────────────────────────────────────────── */}
+      <Modal
+        isOpen={isRecordContribOpen}
+        onClose={() => !recordingContrib && setIsRecordContribOpen(false)}
+        title="Record Contribution"
+        maxWidth="max-w-sm"
+      >
+        <form onSubmit={handleRecordContribution} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Month</label>
+            <select
+              required
+              value={contribMonth}
+              onChange={(e) => {
+                const m = Number(e.target.value);
+                setContribMonth(e.target.value);
+                setContribEnrollmentId('');
+                const schedule = fund.ChitFundTemplate?.monthlySchedule ?? [];
+                const entry = schedule.find((s) => s.month === m);
+                setContribAmount(String(entry?.contributionAmount ?? fund.monthlyContribution));
+              }}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            >
+              <option value="">— Select month —</option>
+              {Array.from({ length: fund.duration }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>Month {m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Member</label>
+            <select
+              required
+              value={contribEnrollmentId}
+              onChange={(e) => setContribEnrollmentId(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            >
+              <option value="">— Choose enrolled member —</option>
+              {enrollments
+                .filter((e) => !contributions.some(
+                  (c) => c.enrollmentId === e.id && c.month === Number(contribMonth)
+                ))
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.Member?.name}{e.ticketNumber != null ? ` (Ticket #${e.ticketNumber})` : ''}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Amount (₹)</label>
+            <input
+              type="number"
+              required
+              min="1"
+              step="any"
+              value={contribAmount}
+              onChange={(e) => setContribAmount(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Paid Date</label>
+            <input
+              type="date"
+              required
+              value={contribPaidDate}
+              onChange={(e) => setContribPaidDate(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+              Note <span className="font-normal normal-case text-slate-400">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={contribNote}
+              onChange={(e) => setContribNote(e.target.value)}
+              placeholder="e.g. Month 1 contribution"
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          {contribError && (
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-medium">
+              <AlertCircle size={14} /> {contribError}
+            </div>
+          )}
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsRecordContribOpen(false)}
+              disabled={recordingContrib}
+              className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={recordingContrib || !contribEnrollmentId}
+              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {recordingContrib ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+              {recordingContrib ? 'Saving...' : 'Record'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Record Auction Modal ──────────────────────────────────────────────── */}
+      <Modal
+        isOpen={isRecordAuctionOpen}
+        onClose={() => !recordingAuction && setIsRecordAuctionOpen(false)}
+        title="Record Auction"
+        maxWidth="max-w-sm"
+      >
+        <form onSubmit={handleRecordAuction} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Auction Month</label>
+            <select
+              required
+              value={auctionMonth}
+              onChange={(e) => {
+                const m = Number(e.target.value);
+                setAuctionMonth(e.target.value);
+                setAuctionWinnerEnrollmentId('');
+                const schedule = fund.ChitFundTemplate?.monthlySchedule ?? [];
+                const entry = schedule.find((s) => s.month === m);
+                setPayoutAmount(String(entry?.auctionAmount ?? fund.totalAmount));
+              }}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            >
+              <option value="">— Select month —</option>
+              {Array.from({ length: fund.duration }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>Month {m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Winner</label>
+            <select
+              required
+              value={auctionWinnerEnrollmentId}
+              onChange={(e) => setAuctionWinnerEnrollmentId(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            >
+              <option value="">— Select auction winner —</option>
+              {enrollments
+                .filter((e) => !e.auctionWon && !auctions.some((a) => a.auctionMonth === Number(auctionMonth) && a.winnerEnrollmentId === e.id))
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.Member?.name}{e.ticketNumber != null ? ` (Ticket #${e.ticketNumber})` : ''}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Payout (₹)</label>
+            <input
+              type="number"
+              required
+              min="1"
+              step="any"
+              value={payoutAmount}
+              onChange={(e) => setPayoutAmount(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Auction Date</label>
+            <input
+              type="date"
+              required
+              value={auctionDateStr}
+              onChange={(e) => setAuctionDateStr(e.target.value)}
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+              Note <span className="font-normal normal-case text-slate-400">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={auctionNote}
+              onChange={(e) => setAuctionNote(e.target.value)}
+              placeholder="e.g. Month 1 auction"
+              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
+            />
+          </div>
+          {auctionError && (
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-medium">
+              <AlertCircle size={14} /> {auctionError}
+            </div>
+          )}
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsRecordAuctionOpen(false)}
+              disabled={recordingAuction}
+              className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={recordingAuction || !auctionWinnerEnrollmentId}
+              className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              {recordingAuction ? <Loader2 className="animate-spin" size={16} /> : <Gavel size={16} />}
+              {recordingAuction ? 'Saving...' : 'Record'}
             </button>
           </div>
         </form>

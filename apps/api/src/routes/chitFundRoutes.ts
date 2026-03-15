@@ -29,4 +29,20 @@ router.post('/:id/members', chitFundController.addMember.bind(chitFundController
 // REMOVE a member (enrollment) from a chit fund
 router.delete('/:id/members/:enrollmentId', chitFundController.removeEnrollment.bind(chitFundController));
 
+// ── Contribution routes ──────────────────────────────────────────────────────────
+
+// GET all contributions for a chit fund
+router.get('/:id/contributions', chitFundController.getContributions.bind(chitFundController));
+
+// RECORD a contribution (auto-creates a CREDIT transaction per partner)
+router.post('/:id/contributions', chitFundController.recordContribution.bind(chitFundController));
+
+// ── Auction routes ──────────────────────────────────────────────────────────────
+
+// GET all auctions for a chit fund
+router.get('/:id/auctions', chitFundController.getAuctions.bind(chitFundController));
+
+// RECORD an auction result (auto-creates a DEBIT transaction per partner)
+router.post('/:id/auctions', chitFundController.recordAuction.bind(chitFundController));
+
 export default router;
