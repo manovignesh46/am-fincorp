@@ -1,9 +1,18 @@
+import { Op } from '@am-fincorp/database';
 import { Transaction, User, Contribution, ChitFundEnrollment, Member, Auction, Loan, Repayment } from '@am-fincorp/database';
 
 interface TransactionFilters {
   nature?: string;
   category?: string;
   userId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface PaginatedResult<T> {
+  rows: T[];
+  count: number;
 }
 
 interface TransactionSummary {
@@ -19,14 +28,24 @@ interface PartnerBalance {
 }
 
 class TransactionService {
-  async getAll(filters: TransactionFilters = {}): Promise<any[]> {
+  async getAll(filters: TransactionFilters = {}): Promise<PaginatedResult<any>> {
     try {
+      const { nature, category, userId, search, page = 1, limit = 10 } = filters;
       const where: Record<string, unknown> = {};
-      if (filters.nature) where.nature = filters.nature;
-      if (filters.category) where.category = filters.category;
-      if (filters.userId) where.userId = Number(filters.userId);
+      if (nature) where.nature = nature;
+      if (category) where.category = category;
+      if (userId) where.userId = Number(userId);
+      if (search) {
+        where[Op.or as unknown as string] = [
+          { note: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
 
-      return await Transaction.findAll({
+      const safePage = Math.max(1, page);
+      const safeLimit = Math.min(100, Math.max(1, limit));
+      const offset = (safePage - 1) * safeLimit;
+
+      const result = await (Transaction as any).findAndCountAll({
         where,
         include: [
           { model: User, as: 'handler', attributes: ['id', 'name', 'email'] },
@@ -65,7 +84,12 @@ class TransactionService {
           },
         ],
         order: [['date', 'DESC'], ['createdAt', 'DESC']],
+        limit: safeLimit,
+        offset,
+        distinct: true,
+        subQuery: false,
       });
+      return { rows: result.rows, count: result.count };
     } catch (error) {
       console.error('Error fetching transactions:', error);
       throw new Error('Could not fetch transactions');

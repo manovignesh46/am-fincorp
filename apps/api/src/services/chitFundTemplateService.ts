@@ -1,4 +1,18 @@
+import { Op } from '@am-fincorp/database';
 import { ChitFundTemplate } from '@am-fincorp/database';
+
+export interface TemplateListParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+  orderBy?: string;
+  orderDir?: 'ASC' | 'DESC';
+}
+
+export interface PaginatedResult<T> {
+  rows: T[];
+  count: number;
+}
 
 class ChitFundTemplateService {
   async createTemplate(data: Record<string, unknown>): Promise<any> {
@@ -10,9 +24,26 @@ class ChitFundTemplateService {
     }
   }
 
-  async getAllTemplates(): Promise<any[]> {
+  async getAllTemplates(params: TemplateListParams = {}): Promise<PaginatedResult<any>> {
     try {
-      return await ChitFundTemplate.findAll({ order: [['createdAt', 'DESC']] });
+      const { search, page = 1, limit = 10, orderBy = 'createdAt', orderDir = 'DESC' } = params;
+      const where: Record<string, unknown> = {};
+      if (search) {
+        where[Op.or as unknown as string] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
+      const safePage = Math.max(1, page);
+      const safeLimit = Math.min(100, Math.max(1, limit));
+      const offset = (safePage - 1) * safeLimit;
+
+      const result = await (ChitFundTemplate as any).findAndCountAll({
+        where,
+        order: [[orderBy, orderDir]],
+        limit: safeLimit,
+        offset,
+      });
+      return { rows: result.rows, count: result.count };
     } catch (error) {
       console.error('Error fetching ChitFund Templates:', error);
       throw new Error('Could not fetch templates');

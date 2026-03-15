@@ -11,10 +11,23 @@ class ChitFundTemplateController {
     }
   }
 
-  async getAll(_req: Request, res: Response): Promise<void> {
+  async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const templates = await chitFundTemplateService.getAllTemplates();
-      res.status(200).json({ success: true, data: templates });
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+      const search = (req.query.search as string) || undefined;
+      const orderBy = (req.query.orderBy as string) || 'createdAt';
+      const orderDir = ((req.query.orderDir as string) || 'DESC').toUpperCase() as 'ASC' | 'DESC';
+
+      const { rows, count } = await chitFundTemplateService.getAllTemplates({ search, page, limit, orderBy, orderDir });
+      res.status(200).json({
+        success: true,
+        data: rows,
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
+      });
     } catch (error) {
       res.status(500).json({ success: false, message: (error as Error).message });
     }

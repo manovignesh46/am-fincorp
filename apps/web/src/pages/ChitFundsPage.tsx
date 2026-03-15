@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
@@ -22,17 +22,25 @@ const ChitFundsPage = () => {
   const [chitFunds, setChitFunds] = useState<ChitFund[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedFund, setSelectedFund] = useState<ChitFund | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchChitFunds = async () => {
+  const fetchChitFunds = async (currentPage = page, currentLimit = limit, search = searchTerm) => {
     try {
       setLoading(true);
-      const res = await axios.get<{ data: ChitFund[] }>('/chit-funds');
+      const params: Record<string, unknown> = { page: currentPage, limit: currentLimit };
+      if (search) params.search = search;
+      const res = await axios.get<{ data: ChitFund[]; total: number }>('/chit-funds', { params });
       setChitFunds(res.data.data);
+      setTotal(res.data.total);
       setError(null);
     } catch (err) {
       console.error('Error fetching chit funds:', err);
@@ -43,8 +51,21 @@ const ChitFundsPage = () => {
   };
 
   useEffect(() => {
-    fetchChitFunds();
-  }, []);
+    fetchChitFunds(page, limit, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, searchTerm]);
+
+  // Debounce: auto-search 500ms after typing stops
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchTerm(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const handlePageChange = (newPage: number) => setPage(newPage);
+  const handleLimitChange = (newLimit: number) => { setLimit(newLimit); setPage(1); };
 
   const handleOpenDeleteModal = (fund: ChitFund) => {
     setSelectedFund(fund);
@@ -56,7 +77,7 @@ const ChitFundsPage = () => {
     try {
       setIsSubmitting(true);
       await axios.delete(`/chit-funds/${selectedFund.id}`);
-      await fetchChitFunds();
+      await fetchChitFunds(page, limit, searchTerm);
       setIsDeleteModalOpen(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -119,10 +140,6 @@ const ChitFundsPage = () => {
     },
   ];
 
-  const filtered = chitFunds.filter((f) =>
-    f.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="p-0">
       <div className="flex items-center justify-between gap-3 mb-8">
@@ -139,9 +156,12 @@ const ChitFundsPage = () => {
           type="text"
           placeholder="Search chit funds..."
           className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
+        {searchInput && (
+          <button type="button" onClick={() => { setSearchInput(''); setSearchTerm(''); setPage(1); }} className="text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold">✕</button>
+        )}
       </div>
 
       {loading ? (
@@ -154,7 +174,7 @@ const ChitFundsPage = () => {
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
           <button
-            onClick={fetchChitFunds}
+            onClick={() => fetchChitFunds(page, limit, searchTerm)}
             className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
           >
             Refresh
@@ -162,12 +182,12 @@ const ChitFundsPage = () => {
         </div>
       ) : (
         <div className="card-clean">
-          <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfunds/${row.id}`)} />
-          {filtered.length === 0 && (
-            <div className="py-20 text-center text-slate-400 font-medium">
-              {searchTerm ? 'No chit funds match your search.' : 'No chit funds yet. Create one to get started.'}
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={chitFunds}
+            onRowClick={(row) => navigate(`/chitfunds/${row.id}`)}
+            pagination={{ page, limit, total, onPageChange: handlePageChange, onLimitChange: handleLimitChange }}
+          />
         </div>
       )}
 

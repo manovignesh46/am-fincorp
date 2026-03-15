@@ -4,13 +4,25 @@ import transactionService from '../services/transactionService';
 class TransactionController {
   async getAll(req: Request, res: Response): Promise<void> {
     try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
       const filters = {
         nature: req.query.nature as string | undefined,
         category: req.query.category as string | undefined,
         userId: req.query.userId as string | undefined,
+        search: (req.query.search as string) || undefined,
+        page,
+        limit,
       };
-      const transactions = await transactionService.getAll(filters);
-      res.status(200).json({ success: true, data: transactions });
+      const { rows, count } = await transactionService.getAll(filters);
+      res.status(200).json({
+        success: true,
+        data: rows,
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
+      });
     } catch (error) {
       res.status(500).json({ success: false, message: (error as Error).message });
     }

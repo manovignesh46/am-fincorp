@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
 require('dotenv').config();
 
 // Initialize Sequelize
@@ -78,6 +78,6 @@ Transaction.hasOne(Loan, { foreignKey: 'disbursementTransactionId' });
 Loan.belongsTo(Transaction, { foreignKey: 'disbursementTransactionId' });
 
 module.exports = {
-  sequelize, User, Member, ChitFundTemplate, ChitFund, ChitFundEnrollment,
+  sequelize, Op, User, Member, ChitFundTemplate, ChitFund, ChitFundEnrollment,
   Transaction, Contribution, Auction, Loan, Repayment, PaymentSchedule
 };

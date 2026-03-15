@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Search, AlertCircle, Loader2, Edit2, Trash2, Plus } from 'lucide-react';
@@ -15,17 +15,25 @@ const ChitFundTemplatesPage = () => {
   const [templates, setTemplates] = useState<ChitFundTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ChitFundTemplate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (currentPage = page, currentLimit = limit, search = searchTerm) => {
     try {
       setLoading(true);
-      const res = await axios.get<{ data: ChitFundTemplate[] }>('/chit-fund-templates');
+      const params: Record<string, unknown> = { page: currentPage, limit: currentLimit };
+      if (search) params.search = search;
+      const res = await axios.get<{ data: ChitFundTemplate[]; total: number }>('/chit-fund-templates', { params });
       setTemplates(res.data.data);
+      setTotal(res.data.total);
       setError(null);
     } catch (err) {
       console.error('Error fetching templates:', err);
@@ -36,8 +44,21 @@ const ChitFundTemplatesPage = () => {
   };
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    fetchTemplates(page, limit, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, searchTerm]);
+
+  // Debounce: auto-search 500ms after typing stops
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchTerm(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const handlePageChange = (newPage: number) => setPage(newPage);
+  const handleLimitChange = (newLimit: number) => { setLimit(newLimit); setPage(1); };
 
   const handleOpenDeleteModal = (template: ChitFundTemplate) => {
     setSelectedTemplate(template);
@@ -49,7 +70,7 @@ const ChitFundTemplatesPage = () => {
     try {
       setIsSubmitting(true);
       await axios.delete(`/chit-fund-templates/${selectedTemplate.id}`);
-      await fetchTemplates();
+      await fetchTemplates(page, limit, searchTerm);
       setIsDeleteModalOpen(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -108,10 +129,6 @@ const ChitFundTemplatesPage = () => {
     },
   ];
 
-  const filtered = templates.filter((t) =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="p-0">
       <div className="flex items-center justify-between gap-3 mb-8">
@@ -128,9 +145,12 @@ const ChitFundTemplatesPage = () => {
           type="text"
           placeholder="Search templates..."
           className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
+        {searchInput && (
+          <button type="button" onClick={() => { setSearchInput(''); setSearchTerm(''); setPage(1); }} className="text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold">✕</button>
+        )}
       </div>
 
       {loading ? (
@@ -143,7 +163,7 @@ const ChitFundTemplatesPage = () => {
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
           <button
-            onClick={fetchTemplates}
+            onClick={() => fetchTemplates(page, limit, searchTerm)}
             className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
           >
             Refresh
@@ -151,12 +171,12 @@ const ChitFundTemplatesPage = () => {
         </div>
       ) : (
         <div className="card-clean">
-          <DataTable columns={columns} data={filtered} onRowClick={(row) => navigate(`/chitfund-templates/${row.id}`)} />
-          {filtered.length === 0 && (
-            <div className="py-20 text-center text-slate-400 font-medium">
-              {searchTerm ? 'No templates match your search.' : 'No templates yet. Create one to get started.'}
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={templates}
+            onRowClick={(row) => navigate(`/chitfund-templates/${row.id}`)}
+            pagination={{ page, limit, total, onPageChange: handlePageChange, onLimitChange: handleLimitChange }}
+          />
         </div>
       )}
 

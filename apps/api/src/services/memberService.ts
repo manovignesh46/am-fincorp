@@ -1,4 +1,18 @@
+import { Op } from '@am-fincorp/database';
 import { Member } from '@am-fincorp/database';
+
+export interface MemberListParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+  orderBy?: string;
+  orderDir?: 'ASC' | 'DESC';
+}
+
+export interface PaginatedResult<T> {
+  rows: T[];
+  count: number;
+}
 
 class MemberService {
   async createMember(memberData: Record<string, unknown>): Promise<any> {
@@ -10,9 +24,28 @@ class MemberService {
     }
   }
 
-  async getAllMembers(): Promise<any[]> {
+  async getAllMembers(params: MemberListParams = {}): Promise<PaginatedResult<any>> {
     try {
-      return await Member.findAll();
+      const { search, page = 1, limit = 10, orderBy = 'createdAt', orderDir = 'DESC' } = params;
+      const where: Record<string, unknown> = {};
+      if (search) {
+        where[Op.or as unknown as string] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { contact: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
+      const safePage = Math.max(1, page);
+      const safeLimit = Math.min(100, Math.max(1, limit));
+      const offset = (safePage - 1) * safeLimit;
+
+      const result = await (Member as any).findAndCountAll({
+        where,
+        order: [[orderBy, orderDir]],
+        limit: safeLimit,
+        offset,
+      });
+      return { rows: result.rows, count: result.count };
     } catch (error) {
       console.error('Error fetching members:', error);
       throw new Error('Could not fetch members');

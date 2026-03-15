@@ -17,12 +17,22 @@ class MemberController {
     }
   }
 
-  async getAll(_req: Request, res: Response): Promise<void> {
+  async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const members = await memberService.getAllMembers();
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+      const search = (req.query.search as string) || undefined;
+      const orderBy = (req.query.orderBy as string) || 'createdAt';
+      const orderDir = ((req.query.orderDir as string) || 'DESC').toUpperCase() as 'ASC' | 'DESC';
+
+      const { rows, count } = await memberService.getAllMembers({ search, page, limit, orderBy, orderDir });
       res.status(200).json({
         success: true,
-        data: members,
+        data: rows,
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
       });
     } catch (error) {
       res.status(500).json({

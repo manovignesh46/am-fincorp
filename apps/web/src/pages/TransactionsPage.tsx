@@ -64,6 +64,12 @@ const TransactionsPage = () => {
 
   const [filterNature, setFilterNature] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,16 +77,18 @@ const TransactionsPage = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const params: Record<string, string> = {};
+      const params: Record<string, string | number> = { page, limit };
       if (filterNature) params.nature = filterNature;
       if (filterCategory) params.category = filterCategory;
+      if (searchTerm) params.search = searchTerm;
 
       const [txRes, sumRes] = await Promise.all([
-        axios.get<{ data: Transaction[] }>('/transactions', { params }),
+        axios.get<{ data: Transaction[]; total: number }>('/transactions', { params }),
         axios.get<{ data: TransactionSummary }>('/transactions/summary'),
       ]);
 
       setTransactions(txRes.data.data);
+      setTotal(txRes.data.total);
       setSummary(sumRes.data.data);
       setError(null);
     } catch (err) {
@@ -89,11 +97,20 @@ const TransactionsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterNature, filterCategory]);
+  }, [filterNature, filterCategory, searchTerm, page, limit]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Debounce: auto-search 500ms after typing stops
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchTerm(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const handleRecord = async (formData: Record<string, unknown>) => {
     try {
@@ -215,7 +232,7 @@ const TransactionsPage = () => {
         <select
           className="px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-500"
           value={filterNature}
-          onChange={(e) => setFilterNature(e.target.value)}
+          onChange={(e) => { setFilterNature(e.target.value); setPage(1); }}
         >
           <option value="">All Natures</option>
           <option value="CREDIT">Credit</option>
@@ -224,22 +241,34 @@ const TransactionsPage = () => {
         <select
           className="px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-500"
           value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+          onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
         >
           <option value="">All Categories</option>
           {ALL_CATEGORIES.map((c) => (
             <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
           ))}
         </select>
+        <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+          <input
+            type="text"
+            placeholder="Search note..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="flex-1 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
+          />
+          {searchInput && (
+            <button type="button" onClick={() => { setSearchInput(''); setSearchTerm(''); setPage(1); }} className="text-slate-400 hover:text-slate-600 text-xs font-bold">✕</button>
+          )}
+        </div>
         {(filterNature || filterCategory) && (
           <button
-            onClick={() => { setFilterNature(''); setFilterCategory(''); }}
+            onClick={() => { setFilterNature(''); setFilterCategory(''); setPage(1); }}
             className="text-xs font-bold text-blue-600 hover:text-blue-800 px-2"
           >
             Clear filters
           </button>
         )}
-        <span className="ml-auto text-xs text-slate-400 font-medium">{transactions.length} entries</span>
+        <span className="ml-auto text-xs text-slate-400 font-medium">{total} entries</span>
       </div>
 
       {loading ? (
@@ -260,12 +289,12 @@ const TransactionsPage = () => {
         </div>
       ) : (
         <div className="card-clean">
-          <DataTable columns={columns} data={transactions} onRowClick={(row) => navigate(`/transactions/${row.id}`)} />
-          {transactions.length === 0 && (
-            <div className="py-20 text-center text-slate-400 font-medium">
-              No transactions found. Record the first entry.
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={transactions}
+            onRowClick={(row) => navigate(`/transactions/${row.id}`)}
+            pagination={{ page, limit, total, onPageChange: setPage, onLimitChange: (l) => { setLimit(l); setPage(1); } }}
+          />
         </div>
       )}
 

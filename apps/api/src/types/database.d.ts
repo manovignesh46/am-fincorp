@@ -1,5 +1,6 @@
 declare module '@am-fincorp/database' {
-  import { Sequelize, Model, ModelStatic } from 'sequelize';
+  import { Sequelize, Model, ModelStatic, WhereOptions } from 'sequelize';
+  export { Op } from 'sequelize';
 
   export const sequelize: Sequelize;
   export const User: ModelStatic<Model>;

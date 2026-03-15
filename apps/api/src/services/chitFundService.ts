@@ -1,4 +1,18 @@
+import { Op } from '@am-fincorp/database';
 import { ChitFund, ChitFundTemplate, ChitFundEnrollment, Member, Contribution, Auction, Transaction, sequelize } from '@am-fincorp/database';
+
+export interface ChitFundListParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+  orderBy?: string;
+  orderDir?: 'ASC' | 'DESC';
+}
+
+export interface PaginatedResult<T> {
+  rows: T[];
+  count: number;
+}
 
 class ChitFundService {
   async createChitFund(chitFundData: Record<string, unknown>): Promise<any> {
@@ -14,11 +28,28 @@ class ChitFundService {
     }
   }
 
-  async getAllChitFunds(): Promise<any[]> {
+  async getAllChitFunds(params: ChitFundListParams = {}): Promise<PaginatedResult<any>> {
     try {
-      return await ChitFund.findAll({
+      const { search, page = 1, limit = 10, orderBy = 'createdAt', orderDir = 'DESC' } = params;
+      const where: Record<string, unknown> = {};
+      if (search) {
+        where[Op.or as unknown as string] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
+      const safePage = Math.max(1, page);
+      const safeLimit = Math.min(100, Math.max(1, limit));
+      const offset = (safePage - 1) * safeLimit;
+
+      const result = await (ChitFund as any).findAndCountAll({
+        where,
         include: [{ model: ChitFundTemplate }],
+        order: [[orderBy, orderDir]],
+        limit: safeLimit,
+        offset,
+        distinct: true,
       });
+      return { rows: result.rows, count: result.count };
     } catch (error) {
       console.error('Error fetching Chit Funds:', error);
       throw new Error('Could not fetch Chit Funds');

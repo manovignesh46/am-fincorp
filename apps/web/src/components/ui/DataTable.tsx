@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import Pagination from './Pagination';
 
 export interface Column<T = Record<string, unknown>> {
   header: string;
@@ -8,11 +9,20 @@ export interface Column<T = Record<string, unknown>> {
   hideOnMobile?: boolean;
 }
 
+export interface PaginationConfig {
+  page: number;
+  limit: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
+}
+
 interface DataTableProps<T = Record<string, unknown>> {
   columns: Column<T>[];
   data: T[];
   className?: string;
   onRowClick?: (row: T) => void;
+  pagination?: PaginationConfig;
 }
 
 const DataTable = <T = Record<string, unknown>>({
@@ -20,9 +30,11 @@ const DataTable = <T = Record<string, unknown>>({
   data,
   className,
   onRowClick,
+  pagination,
 }: DataTableProps<T>) => {
   return (
-    <div className={cn('w-full overflow-x-auto overscroll-x-contain rounded-lg border border-slate-200 bg-white shadow-sm', className)}>
+    <div className={cn('w-full', className)}>
+      <div className="overflow-x-auto overscroll-x-contain rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full text-left text-sm text-slate-600">
         <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
           <tr>
@@ -74,6 +86,16 @@ const DataTable = <T = Record<string, unknown>>({
           )}
         </tbody>
       </table>
+      </div>
+      {pagination && (
+        <Pagination
+          page={pagination.page}
+          limit={pagination.limit}
+          total={pagination.total}
+          onPageChange={pagination.onPageChange}
+          onLimitChange={pagination.onLimitChange}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserPlus, Search, AlertCircle, Loader2, Edit2, Trash2 } from 'lucide-react';
@@ -9,12 +9,24 @@ import MemberForm from '../components/members/MemberForm';
 import { Member } from '../types';
 import { Column } from '../components/ui/DataTable';
 
+interface MemberFormData {
+  name: string;
+  contact: string;
+  email: string;
+  address: string;
+}
 const MembersPage = () => {
   const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,11 +34,14 @@ const MembersPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchMembers = async () => {
+  const fetchMembers = async (currentPage = page, currentLimit = limit, search = searchTerm) => {
     try {
       setLoading(true);
-      const response = await axios.get<{ data: Member[] }>('/members');
+      const params: Record<string, unknown> = { page: currentPage, limit: currentLimit };
+      if (search) params.search = search;
+      const response = await axios.get<{ data: Member[]; total: number; page: number; limit: number }>('/members', { params });
       setMembers(response.data.data);
+      setTotal(response.data.total);
       setError(null);
     } catch (err) {
       console.error('Error fetching members:', err);
@@ -37,8 +52,21 @@ const MembersPage = () => {
   };
 
   useEffect(() => {
-    fetchMembers();
-  }, []);
+    fetchMembers(page, limit, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, searchTerm]);
+
+  // Debounce: auto-search 500ms after typing stops
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearchTerm(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const handlePageChange = (newPage: number) => setPage(newPage);
+  const handleLimitChange = (newLimit: number) => { setLimit(newLimit); setPage(1); };
 
   const handleOpenAddModal = () => {
     setSelectedMember(null);
@@ -55,15 +83,14 @@ const MembersPage = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleAddOrEditMember = async (formData: Record<string, unknown>) => {
-    try {
+  const handleAddOrEditMember = async (formData: MemberFormData) => {    try {
       setIsSubmitting(true);
       if (selectedMember) {
         await axios.put(`/members/${selectedMember.id}`, formData);
       } else {
         await axios.post('/members', formData);
       }
-      await fetchMembers();
+      await fetchMembers(page, limit, searchTerm);
       setIsModalOpen(false);
     } catch (err) {
       console.error('Error saving member:', err);
@@ -80,7 +107,7 @@ const MembersPage = () => {
     try {
       setIsSubmitting(true);
       await axios.delete(`/members/${selectedMember.id}`);
-      await fetchMembers();
+      await fetchMembers(page, limit, searchTerm);
       setIsDeleteModalOpen(false);
     } catch (err) {
       console.error('Error deleting member:', err);
@@ -124,12 +151,6 @@ const MembersPage = () => {
     },
   ];
 
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.contact.includes(searchTerm)
-  );
-
   return (
     <div className="p-0">
       <div className="flex items-center justify-between gap-3 mb-8">
@@ -144,11 +165,14 @@ const MembersPage = () => {
         <Search className="text-slate-400" size={20} />
         <input
           type="text"
-          placeholder="Search by name or contact..."
+          placeholder="Search by name, contact or email..."
           className="flex-1 outline-none text-slate-700 placeholder:text-slate-400 font-medium text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
+        {searchInput && (
+          <button type="button" onClick={() => { setSearchInput(''); setSearchTerm(''); setPage(1); }} className="text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold">✕</button>
+        )}
       </div>
 
       {loading ? (
@@ -161,7 +185,7 @@ const MembersPage = () => {
           <AlertCircle className="mb-4" size={40} />
           <p className="font-bold">{error}</p>
           <button
-            onClick={() => fetchMembers()}
+            onClick={() => fetchMembers(page, limit, searchTerm)}
             className="mt-4 text-xs font-black uppercase tracking-widest text-rose-600 hover:text-rose-800"
           >
             Refresh
@@ -169,12 +193,12 @@ const MembersPage = () => {
         </div>
       ) : (
         <div className="card-clean">
-          <DataTable columns={columns} data={filteredMembers} onRowClick={(row) => navigate(`/members/${row.id}`)} />
-          {filteredMembers.length === 0 && (
-            <div className="py-20 text-center text-slate-400 font-medium">
-              No members found matching your search.
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={members}
+            onRowClick={(row) => navigate(`/members/${row.id}`)}
+            pagination={{ page, limit, total, onPageChange: handlePageChange, onLimitChange: handleLimitChange }}
+          />
         </div>
       )}
 
