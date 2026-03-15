@@ -7,13 +7,13 @@ const STATUS_OPTIONS: ChitFundStatus[] = ['ACTIVE', 'INACTIVE', 'COMPLETED', 'CL
 
 interface ChitFundFormData {
   name: string;
+  description: string;
   templateId: string;
   totalAmount: string;
   monthlyContribution: string;
   duration: string;
   startDate: string;
   status: ChitFundStatus;
-  currentMonth: string;
 }
 
 interface ChitFundFormProps {
@@ -26,13 +26,13 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
   const [templates, setTemplates] = useState<ChitFundTemplate[]>([]);
   const [formData, setFormData] = useState<ChitFundFormData>({
     name: initialData?.name || '',
+    description: initialData?.description || '',
     templateId: initialData?.templateId ? String(initialData.templateId) : '',
     totalAmount: initialData?.totalAmount ? String(initialData.totalAmount) : '',
     monthlyContribution: initialData?.monthlyContribution ? String(initialData.monthlyContribution) : '',
     duration: initialData?.duration ? String(initialData.duration) : '',
     startDate: initialData?.startDate ? initialData.startDate.slice(0, 10) : '',
     status: initialData?.status || 'ACTIVE',
-    currentMonth: initialData?.currentMonth ? String(initialData.currentMonth) : '1',
   });
 
   useEffect(() => {
@@ -71,7 +71,8 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
       totalAmount: parseFloat(formData.totalAmount),
       monthlyContribution: parseFloat(formData.monthlyContribution),
       duration: parseInt(formData.duration, 10),
-      currentMonth: parseInt(formData.currentMonth, 10),
+      currentMonth: 1,
+      description: formData.description || null,
       templateId: formData.templateId || null,
     });
   };
@@ -84,17 +85,18 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Template selector */}
       <div className="space-y-1.5">
-        <label className={labelClass}>Use a Template (Optional)</label>
+        <label className={labelClass}>Template <span className="text-rose-500">*</span></label>
         <select
           name="templateId"
+          required
           className={inputClass}
           value={formData.templateId}
           onChange={handleTemplateSelect}
         >
-          <option value="">— Select a template to auto-fill —</option>
+          <option value="">— Select a template —</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.durationMonths} months)
+              {t.name} ({t.durationMonths} months · ₹{Number(t.monthlyContribution).toLocaleString('en-IN')}/mo)
             </option>
           ))}
         </select>
@@ -109,6 +111,18 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
           placeholder="e.g. Gold Chit – Batch A"
           className={inputClass}
           value={formData.name}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className={labelClass}>Description <span className="text-slate-400 font-normal normal-case tracking-normal">(optional)</span></label>
+        <input
+          type="text"
+          name="description"
+          placeholder="e.g. Monthly gold savings scheme for batch A"
+          className={inputClass}
+          value={formData.description}
           onChange={handleChange}
         />
       </div>
@@ -129,23 +143,6 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
           />
         </div>
         <div className="space-y-1.5">
-          <label className={labelClass}>Monthly (₹)</label>
-          <input
-            type="number"
-            name="monthlyContribution"
-            required
-            min="1"
-            step="any"
-            placeholder="e.g. 10000"
-            className={inputClass}
-            value={formData.monthlyContribution}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
           <label className={labelClass}>Duration (Months)</label>
           <input
             type="number"
@@ -158,39 +155,27 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
             onChange={handleChange}
           />
         </div>
-        <div className="space-y-1.5">
-          <label className={labelClass}>Current Month</label>
-          <input
-            type="number"
-            name="currentMonth"
-            min="1"
-            className={inputClass}
-            value={formData.currentMonth}
-            onChange={handleChange}
-          />
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className={labelClass}>Start Date</label>
-          <input
-            type="date"
-            name="startDate"
-            required
-            className={inputClass}
-            value={formData.startDate}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className={labelClass}>Status</label>
-          <select name="status" className={inputClass} value={formData.status} onChange={handleChange}>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Start Date</label>
+        <input
+          type="date"
+          name="startDate"
+          required
+          className={inputClass}
+          value={formData.startDate}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className={labelClass}>Status</label>
+        <select name="status" className={inputClass} value={formData.status} onChange={handleChange}>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
       </div>
 
       <button

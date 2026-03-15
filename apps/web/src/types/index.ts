@@ -41,6 +41,7 @@ export type ChitFundStatus = 'ACTIVE' | 'INACTIVE' | 'COMPLETED' | 'CLOSED';
 export interface ChitFund {
   id: number;
   name: string;
+  description?: string | null;
   totalAmount: number;
   monthlyContribution: number;
   duration: number;
@@ -129,6 +130,17 @@ export interface Transaction {
   referenceTransactionId?: number;
   userId: number;
   createdAt: string;
+  // Nested member resolution paths
+  Contribution?: {
+    ChitFundEnrollment?: { Member?: { id: number; name: string } };
+  };
+  Auction?: {
+    winner?: { Member?: { id: number; name: string } };
+  };
+  Repayment?: {
+    Loan?: { Member?: { id: number; name: string } };
+  };
+  Loan?: { Member?: { id: number; name: string } };
 }
 
 export interface TransactionSummary {

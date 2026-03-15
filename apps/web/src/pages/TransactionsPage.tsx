@@ -29,6 +29,13 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[];
 
+const getMember = (row: Transaction): string | null =>
+  row.Contribution?.ChitFundEnrollment?.Member?.name ??
+  row.Auction?.winner?.Member?.name ??
+  row.Repayment?.Loan?.Member?.name ??
+  row.Loan?.Member?.name ??
+  null;
+
 interface SummaryCardProps {
   label: string;
   value: number;
@@ -105,9 +112,29 @@ const TransactionsPage = () => {
 
   const columns: Column<Transaction>[] = [
     {
-      header: 'Date',
-      accessor: (row) =>
-        new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      header: 'Date & Time',
+      accessor: (row) => {
+        const d = new Date(row.date);
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-slate-800">
+              {d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+            <span className="text-xs text-slate-400">
+              {d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Member',
+      accessor: (row) => {
+        const name = getMember(row);
+        return name
+          ? <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">{name}</span>
+          : <span className="text-slate-300 text-xs">—</span>;
+      },
     },
     {
       header: 'Nature',

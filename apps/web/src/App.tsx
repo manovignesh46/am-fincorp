@@ -11,6 +11,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import ChitFundDetailPage from './pages/ChitFundDetailPage';
 import ChitFundFormPage from './pages/ChitFundFormPage';
+import ChitFundContributionsPage from './pages/ChitFundContributionsPage';
 import ChitFundTemplateDetailPage from './pages/ChitFundTemplateDetailPage';
 import ChitFundTemplateFormPage from './pages/ChitFundTemplateFormPage';
 import TransactionDetailPage from './pages/TransactionDetailPage';
@@ -76,6 +77,7 @@ function App() {
             <Route path="chitfunds" element={<ChitFundsPage />} />
             <Route path="chitfunds/new" element={<ChitFundFormPage />} />
             <Route path="chitfunds/:id" element={<ChitFundDetailPage />} />
+            <Route path="chitfunds/:id/contributions" element={<ChitFundContributionsPage />} />
             <Route path="chitfunds/:id/edit" element={<ChitFundFormPage />} />
             <Route path="chitfund-templates" element={<ChitFundTemplatesPage />} />
             <Route path="chitfund-templates/new" element={<ChitFundTemplateFormPage />} />

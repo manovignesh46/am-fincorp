@@ -9,9 +9,10 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   maxWidth?: string;
+  compact?: boolean;
 }
 
-const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: ModalProps) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md', compact = false }: ModalProps) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -35,7 +36,10 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: Moda
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-6"
+      className={cn(
+        'fixed inset-0 z-50 flex flex-col sm:justify-center sm:items-center sm:p-6',
+        compact ? 'justify-center items-center p-4' : 'justify-end'
+      )}
       onTouchStart={stopTouch}
       onTouchMove={stopTouch}
       onTouchEnd={stopTouch}
@@ -45,20 +49,23 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: Moda
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200"
         onClick={onClose}
       />
-      {/* Dialog — tall bottom-sheet on mobile (88 vh), centered card on sm+ */}
+      {/* Dialog */}
       <div className={cn(
         'relative bg-white w-full flex flex-col',
-        'rounded-t-2xl sm:rounded-2xl',
+        compact ? 'rounded-2xl' : 'rounded-t-2xl sm:rounded-2xl',
         'shadow-2xl border border-slate-200',
         'animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200',
-        // Mobile: fill 88% of screen height so form is immediately visible + scrolls inside
-        'h-[88vh] sm:h-auto sm:max-h-[90vh]',
+        compact
+          ? 'h-auto max-h-[90vh]'
+          : 'h-[88vh] sm:h-auto sm:max-h-[90vh]',
         maxWidth
       )}>
-        {/* Drag handle (mobile only) */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-300" />
-        </div>
+        {/* Drag handle (mobile only, non-compact) */}
+        {!compact && (
+          <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-slate-300" />
+          </div>
+        )}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
           <h3 className="text-lg font-bold text-slate-900 leading-none">{title}</h3>
           <button

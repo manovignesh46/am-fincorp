@@ -4,11 +4,15 @@ import axios from 'axios';
 import {
   ArrowLeft, Loader2, AlertCircle, Edit2, Trash2,
   Coins, Calendar, TrendingUp, Hash, Activity, LayoutTemplate,
-  UserPlus, Users, UserMinus, Phone, Ticket,
-  Receipt, Gavel, Plus, CheckCircle2,
+  UserPlus,
+  CheckCircle2, Gavel, ArrowDownRight, ArrowUpRight, CalendarClock,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Button from '../components/ui/Button';
+import ContributionsOverview from '../components/chitfunds/ContributionsOverview';
+import AuctionsOverview from '../components/chitfunds/AuctionsOverview';
+import EnrolledMembers from '../components/chitfunds/EnrolledMembers';
 import { ChitFund, ChitFundStatus, ChitFundEnrollment, Member, ChitFundContribution, ChitFundAuction } from '../types';
 
 const STATUS_STYLES: Record<ChitFundStatus, string> = {
@@ -25,10 +29,11 @@ interface InfoRowProps {
   icon: React.ElementType;
   label: string;
   value?: React.ReactNode;
+  className?: string;
 }
 
-const InfoRow = ({ icon: Icon, label, value }: InfoRowProps) => (
-  <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
+const InfoRow = ({ icon: Icon, label, value, className = '' }: InfoRowProps) => (
+  <div className={`flex items-start gap-3 py-3.5 ${className}`}>
     <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
       <Icon size={15} className="text-slate-400" />
     </div>
@@ -57,11 +62,11 @@ const ChitFundDetailPage = () => {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [ticketNumber, setTicketNumber] = useState('');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
   const [addingMember, setAddingMember] = useState(false);
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeTargetEnrollment, setRemoveTargetEnrollment] = useState<ChitFundEnrollment | null>(null);
 
   // ── Contributions state ─────────────────────────────────────────────────
   const [contributions, setContributions] = useState<ChitFundContribution[]>([]);
@@ -86,6 +91,7 @@ const ChitFundDetailPage = () => {
   const [auctionNote, setAuctionNote] = useState('');
   const [recordingAuction, setRecordingAuction] = useState(false);
   const [auctionError, setAuctionError] = useState<string | null>(null);
+
 
   const fetchFund = async () => {
     try {
@@ -142,8 +148,7 @@ const ChitFundDetailPage = () => {
 
   const openAddMemberModal = async () => {
     setIsAddMemberModalOpen(true);
-    setSelectedMemberId('');
-    setTicketNumber('');
+    setSelectedMemberIds([]);
     setAddMemberError(null);
     try {
       setMembersLoading(true);
@@ -158,31 +163,45 @@ const ChitFundDetailPage = () => {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMemberId) return;
+    if (selectedMemberIds.length === 0) return;
     try {
       setAddingMember(true);
       setAddMemberError(null);
-      const res = await axios.post<{ data: ChitFundEnrollment }>(`/chit-funds/${id}/members`, {
-        memberId: Number(selectedMemberId),
-        ticketNumber: ticketNumber ? Number(ticketNumber) : undefined,
-      });
-      setEnrollments((prev) => [...prev, res.data.data]);
-      setIsAddMemberModalOpen(false);
+      const res = await axios.post<{ data: ChitFundEnrollment[]; skipped: string[] }>(
+        `/chit-funds/${id}/members`,
+        { memberIds: selectedMemberIds },
+      );
+      if (res.data.data.length > 0) setEnrollments((prev) => [...prev, ...res.data.data]);
+      if (res.data.skipped?.length > 0) {
+        const names = res.data.skipped.map(
+          (sid) => allMembers.find((m) => String(m.id) === sid)?.name ?? `ID ${sid}`
+        );
+        setAddMemberError(`Already enrolled (skipped): ${names.join(', ')}`);
+      } else {
+        setIsAddMemberModalOpen(false);
+      }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setAddMemberError(err.response?.data?.message || 'Failed to add member.');
+        setAddMemberError(err.response?.data?.message || 'Failed to add members.');
       }
     } finally {
       setAddingMember(false);
     }
   };
 
-  const handleRemoveMember = async (enrollmentId: number) => {
-    if (!window.confirm('Remove this member from the chit fund?')) return;
+  const handleRemoveMember = (enrollmentId: number) => {
+    const enrollment = enrollments.find((e) => e.id === enrollmentId);
+    if (!enrollment) return;
+    setRemoveTargetEnrollment(enrollment);
+  };
+
+  const doRemoveMember = async () => {
+    if (!removeTargetEnrollment) return;
     try {
-      setRemovingId(enrollmentId);
-      await axios.delete(`/chit-funds/${id}/members/${enrollmentId}`);
-      setEnrollments((prev) => prev.filter((e) => e.id !== enrollmentId));
+      setRemovingId(removeTargetEnrollment.id);
+      await axios.delete(`/chit-funds/${id}/members/${removeTargetEnrollment.id}`);
+      setEnrollments((prev) => prev.filter((e) => e.id !== removeTargetEnrollment.id));
+      setRemoveTargetEnrollment(null);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         alert(err.response?.data?.message || 'Failed to remove member.');
@@ -377,265 +396,114 @@ const ChitFundDetailPage = () => {
 
           {/* Detail card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <InfoRow icon={TrendingUp} label="Total Amount" value={fmt(fund.totalAmount)} />
-            <InfoRow icon={Coins} label="Monthly Contribution" value={fmt(fund.monthlyContribution)} />
-            <InfoRow icon={Hash} label="Duration" value={`${fund.duration} months`} />
-            <InfoRow icon={Activity} label="Current Month" value={`Month ${fund.currentMonth}`} />
-            <InfoRow
-              icon={Calendar}
-              label="Start Date"
-              value={new Date(fund.startDate).toLocaleDateString('en-IN', {
-                day: '2-digit', month: 'long', year: 'numeric',
-              })}
-            />
-            {fund.ChitFundTemplate && (
-              <InfoRow icon={LayoutTemplate} label="Template Used" value={fund.ChitFundTemplate.name} />
-            )}
-            <InfoRow
-              icon={Calendar}
-              label="Created On"
-              value={new Date(fund.createdAt).toLocaleDateString('en-IN', {
-                day: '2-digit', month: 'long', year: 'numeric',
-              })}
-            />
-          </div>
-        </div>
+            {(() => {
+              // Computed values
+              const startDate = new Date(fund.startDate);
+              const endDate = new Date(startDate);
+              endDate.setMonth(endDate.getMonth() + fund.duration - 1);
 
-        {/* ── RIGHT: Enrolled Members ────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users size={18} className="text-slate-400" />
-              <h3 className="text-sm font-bold text-slate-800">
-                Enrolled Members
-                {enrollments.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-bold">
-                    {enrollments.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <Button onClick={openAddMemberModal} icon={UserPlus} label="Add Member" hideLabel variant="success" size="sm" />
-          </div>
+              const cashInflow = contributions.reduce((sum, c) => sum + c.amount, 0);
+              const cashOutflow = auctions.reduce((sum, a) => sum + a.payoutAmount, 0);
+              const totalProfit = cashInflow - cashOutflow;
 
-          {enrollmentsLoading ? (
-            <div className="flex items-center justify-center py-14 text-slate-400">
-              <Loader2 className="animate-spin mr-2" size={20} />
-              <span className="text-sm font-medium">Loading members...</span>
-            </div>
-          ) : enrollments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-slate-400">
-              <Users size={40} className="mb-3 opacity-20" />
-              <p className="text-sm font-medium">No members enrolled yet</p>
-              <p className="text-xs mt-0.5">Click "Add Member" to enroll the first member</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Member</th>
-                    <th className="py-2.5 px-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-24">Ticket #</th>
-                    <th className="py-2.5 px-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-28">Status</th>
-                    <th className="py-2.5 px-4 w-12"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {enrollments.map((enrollment) => (
-                    <tr key={enrollment.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-800">{enrollment.Member?.name ?? '—'}</p>
-                        <div className="flex items-center gap-1 mt-0.5 text-slate-400">
-                          <Phone size={11} />
-                          <span className="text-xs">{enrollment.Member?.contact ?? '—'}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {enrollment.ticketNumber != null ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold">
-                            <Ticket size={11} /> {enrollment.ticketNumber}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                          enrollment.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : enrollment.status === 'COMPLETED'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-rose-50 text-rose-600 border-rose-200'
-                        }`}>
-                          {enrollment.status}
+              // Next auction date: find lowest future month that has no auction yet
+              const auctionedMonths = new Set(auctions.map((a) => a.auctionMonth));
+              const now = new Date();
+              const currentMonth = Math.max(1, Math.min(
+                (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth()) + 1,
+                fund.duration
+              ));
+              let nextAuctionMonth: number | null = null;
+              for (let m = currentMonth; m <= fund.duration; m++) {
+                if (!auctionedMonths.has(m)) { nextAuctionMonth = m; break; }
+              }
+              const nextAuctionDate = nextAuctionMonth
+                ? (() => { const d = new Date(startDate); d.setMonth(d.getMonth() + nextAuctionMonth - 1); return d; })()
+                : null;
+
+              const fmtDate = (d: Date) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+              const rowCls = 'border-b border-slate-100 last:border-0';
+
+              return (
+                <>
+                  {/* 2-per-row grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100 sm:divide-y-0">
+                    <InfoRow icon={TrendingUp} label="Total Amount" value={fmt(fund.totalAmount)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
+                    <InfoRow icon={Coins} label="Monthly Contribution" value={fmt(fund.monthlyContribution)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
+                    <InfoRow icon={Hash} label="Duration" value={`${fund.duration} months`} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
+                    <InfoRow icon={Activity} label="Current Month" value={`Month ${fund.currentMonth}`} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
+                    <InfoRow icon={Calendar} label="Start Date" value={fmtDate(startDate)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
+                    <InfoRow icon={Calendar} label="End Date" value={fmtDate(endDate)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
+                    <InfoRow
+                      icon={ArrowDownRight}
+                      label="Cash Inflow"
+                      value={<span className="text-emerald-600">{fmt(cashInflow)}</span>}
+                      className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`}
+                    />
+                    <InfoRow
+                      icon={ArrowUpRight}
+                      label="Cash Outflow"
+                      value={<span className="text-rose-600">{fmt(cashOutflow)}</span>}
+                      className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`}
+                    />
+                    <InfoRow
+                      icon={TrendingUp}
+                      label="Total Profit"
+                      value={
+                        <span className={totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                          {totalProfit >= 0 ? '+' : ''}{fmt(totalProfit)}
                         </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => handleRemoveMember(enrollment.id)}
-                          disabled={removingId === enrollment.id}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-40"
-                          title="Remove member"
-                        >
-                          {removingId === enrollment.id
-                            ? <Loader2 size={15} className="animate-spin" />
-                            : <UserMinus size={15} />}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      }
+                      className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`}
+                    />
+                    <InfoRow
+                      icon={CalendarClock}
+                      label="Next Auction"
+                      value={
+                        nextAuctionDate
+                          ? `Month ${nextAuctionMonth} · ${nextAuctionDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                          : <span className="text-slate-400 font-normal italic">All months auctioned</span>
+                      }
+                      className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`}
+                    />
+                    {fund.ChitFundTemplate && (
+                      <InfoRow icon={LayoutTemplate} label="Template Used" value={fund.ChitFundTemplate.name} className={`${rowCls} sm:pr-4`} />
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
+
+        {/* ── RIGHT: Contributions ──────────────────────────────────────────── */}
+        <ContributionsOverview
+          fund={fund}
+          chitFundId={id!}
+          enrollments={enrollments}
+          contributions={contributions}
+          loading={contributionsLoading}
+          onRecord={() => openRecordContribModal(fund)}
+        />
       </div>
 
-      {/* ── Monthly Contributions & Auctions ─────────────────────────────────── */}
+      {/* ── Monthly Overview ──────────────────────────────────────────────────── */}
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Contributions */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Receipt size={18} className="text-slate-400" />
-              <h3 className="text-sm font-bold text-slate-800">
-                Contributions
-                {contributions.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-bold">
-                    {contributions.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <button
-              onClick={() => openRecordContribModal(fund)}
-              disabled={enrollments.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-            >
-              <Plus size={14} /> Record
-            </button>
-          </div>
-          {contributionsLoading ? (
-            <div className="flex items-center justify-center py-10 text-slate-400">
-              <Loader2 className="animate-spin mr-2" size={18} /> Loading...
-            </div>
-          ) : contributions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-              <Receipt size={36} className="mb-2 opacity-20" />
-              <p className="text-sm font-medium">No contributions recorded yet</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-16">Month</th>
-                    <th className="py-2 px-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Member</th>
-                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
-                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {contributions.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 text-center">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
-                          {c.month}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-slate-700">
-                        {c.ChitFundEnrollment?.Member?.name ?? '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
-                        {fmt(c.amount)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                          c.status === 'PAID'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : c.status === 'PENDING'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-rose-50 text-rose-600 border-rose-200'
-                        }`}>
-                          {c.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Auctions */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Gavel size={18} className="text-slate-400" />
-              <h3 className="text-sm font-bold text-slate-800">
-                Monthly Auctions
-                {auctions.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-full font-bold">
-                    {auctions.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <button
-              onClick={() => openRecordAuctionModal(fund)}
-              disabled={enrollments.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-            >
-              <Plus size={14} /> Record
-            </button>
-          </div>
-          {auctionsLoading ? (
-            <div className="flex items-center justify-center py-10 text-slate-400">
-              <Loader2 className="animate-spin mr-2" size={18} /> Loading...
-            </div>
-          ) : auctions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-              <Gavel size={36} className="mb-2 opacity-20" />
-              <p className="text-sm font-medium">No auctions recorded yet</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2 px-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider w-16">Month</th>
-                    <th className="py-2 px-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Winner</th>
-                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Bid</th>
-                    <th className="py-2 px-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Payout</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {auctions.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 text-center">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">
-                          {a.auctionMonth}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-slate-700">
-                        {a.winner?.Member?.name ?? '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
-                        {a.bidAmount != null ? fmt(a.bidAmount) : '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
-                        {fmt(a.payoutAmount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
+        <EnrolledMembers
+          enrollments={enrollments}
+          contributions={contributions}
+          loading={enrollmentsLoading}
+          removingId={removingId}
+          onAdd={openAddMemberModal}
+          onRemove={handleRemoveMember}
+        />
+        <AuctionsOverview
+          fund={fund}
+          enrollments={enrollments}
+          auctions={auctions}
+          loading={auctionsLoading}
+          onRecord={() => openRecordAuctionModal(fund)}
+        />
       </div>
 
       {/* ── Add Member Modal ──────────────────────────────────────────────────── */}
@@ -644,48 +512,58 @@ const ChitFundDetailPage = () => {
         onClose={() => !addingMember && setIsAddMemberModalOpen(false)}
         title="Add Member to Chit Fund"
         maxWidth="max-w-sm"
+        compact
       >
         <form onSubmit={handleAddMember} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-              Select Member
-            </label>
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Select Members
+              </label>
+              {selectedMemberIds.length > 0 && (
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                  {selectedMemberIds.length} selected
+                </span>
+              )}
+            </div>
             {membersLoading ? (
               <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
                 <Loader2 className="animate-spin" size={16} /> Loading members...
               </div>
+            ) : availableMembers.length === 0 ? (
+              <p className="text-xs text-slate-400 ml-1 py-2">All members are already enrolled.</p>
             ) : (
-              <select
-                required
-                value={selectedMemberId}
-                onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
-              >
-                <option value="">— Choose a member —</option>
-                {availableMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.contact})
-                  </option>
-                ))}
-              </select>
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+                {availableMembers.map((m) => {
+                  const checked = selectedMemberIds.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
+                        checked ? 'bg-blue-50' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          setSelectedMemberIds((prev) =>
+                            checked ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                          )
+                        }
+                        className="w-4 h-4 rounded accent-blue-600 flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className={`text-sm font-semibold truncate ${
+                          checked ? 'text-blue-700' : 'text-slate-800'
+                        }`}>{m.name}</p>
+                        <p className="text-xs text-slate-400 truncate">{m.contact}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
             )}
-            {availableMembers.length === 0 && !membersLoading && (
-              <p className="text-xs text-slate-400 ml-1">All members are already enrolled.</p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
-              Ticket Number <span className="font-normal normal-case text-slate-400">(optional)</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              placeholder="e.g. 1"
-              value={ticketNumber}
-              onChange={(e) => setTicketNumber(e.target.value)}
-              className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
-            />
           </div>
 
           {addMemberError && (
@@ -706,11 +584,15 @@ const ChitFundDetailPage = () => {
             </button>
             <button
               type="submit"
-              disabled={addingMember || !selectedMemberId}
+              disabled={addingMember || selectedMemberIds.length === 0}
               className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
             >
               {addingMember ? <Loader2 className="animate-spin" size={16} /> : <UserPlus size={16} />}
-              {addingMember ? 'Adding...' : 'Add Member'}
+              {addingMember
+                ? 'Adding...'
+                : selectedMemberIds.length > 1
+                  ? `Add ${selectedMemberIds.length} Members`
+                  : 'Add Member'}
             </button>
           </div>
         </form>
@@ -966,6 +848,52 @@ const ChitFundDetailPage = () => {
           </div>
         </div>
       </Modal>
+      {/* ── Remove Member: Blocked (has contributions) ──────────────────────── */}
+      {removeTargetEnrollment && contributions.some((c) => c.enrollmentId === removeTargetEnrollment.id) && (
+        <Modal
+          isOpen
+          onClose={() => setRemoveTargetEnrollment(null)}
+          title="Cannot Remove Member"
+          maxWidth="max-w-sm"
+          compact
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertCircle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {removeTargetEnrollment.Member?.name} has{' '}
+                  {contributions.filter((c) => c.enrollmentId === removeTargetEnrollment.id).length}{' '}
+                  contribution(s) recorded.
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Delete all their contributions first, then remove the member.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setRemoveTargetEnrollment(null)}
+              className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors text-sm"
+            >
+              OK
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Remove Member: Confirm ───────────────────────────────────────────── */}
+      {removeTargetEnrollment && !contributions.some((c) => c.enrollmentId === removeTargetEnrollment.id) && (
+        <ConfirmDialog
+          isOpen
+          onClose={() => setRemoveTargetEnrollment(null)}
+          onConfirm={doRemoveMember}
+          title="Remove Member"
+          message={<>Remove <strong>{removeTargetEnrollment.Member?.name}</strong> from this chit fund? This cannot be undone.</>}
+          confirmLabel="Remove"
+          confirmingLabel="Removing..."
+          isConfirming={!!removingId}
+        />
+      )}
     </div>
   );
 };

@@ -91,11 +91,24 @@ class ChitFundController {
 
   async addMember(req: Request, res: Response): Promise<void> {
     try {
-      const { memberId, ticketNumber } = req.body;
-      if (!memberId) {
-        res.status(400).json({ success: false, message: 'memberId is required' });
+      const { memberId, memberIds } = req.body;
+
+      // Bulk path: array of memberIds
+      if (Array.isArray(memberIds) && memberIds.length > 0) {
+        const { enrolled, skipped } = await chitFundService.addMembers(
+          req.params.id,
+          memberIds.map(String),
+        );
+        res.status(201).json({ success: true, data: enrolled, skipped });
         return;
       }
+
+      // Single path: legacy / ticket-number support
+      if (!memberId) {
+        res.status(400).json({ success: false, message: 'memberId or memberIds is required' });
+        return;
+      }
+      const { ticketNumber } = req.body;
       const enrollment = await chitFundService.addMember(req.params.id, String(memberId), ticketNumber);
       res.status(201).json({ success: true, data: enrollment });
     } catch (error) {
@@ -137,6 +150,16 @@ class ChitFundController {
         req.user!.id
       );
       res.status(201).json({ success: true, data });
+    } catch (error) {
+      res.status(400).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  async deleteContribution(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      await chitFundService.deleteContribution(req.params.id, req.params.contributionId, userId);
+      res.status(200).json({ success: true, message: 'Contribution deleted' });
     } catch (error) {
       res.status(400).json({ success: false, message: (error as Error).message });
     }

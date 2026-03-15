@@ -37,6 +37,9 @@ router.get('/:id/contributions', chitFundController.getContributions.bind(chitFu
 // RECORD a contribution (auto-creates a CREDIT transaction per partner)
 router.post('/:id/contributions', chitFundController.recordContribution.bind(chitFundController));
 
+// DELETE a contribution
+router.delete('/:id/contributions/:contributionId', chitFundController.deleteContribution.bind(chitFundController));
+
 // ── Auction routes ──────────────────────────────────────────────────────────────
 
 // GET all auctions for a chit fund

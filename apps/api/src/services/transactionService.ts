@@ -1,4 +1,4 @@
-import { Transaction, User } from '@am-fincorp/database';
+import { Transaction, User, Contribution, ChitFundEnrollment, Member, Auction, Loan, Repayment } from '@am-fincorp/database';
 
 interface TransactionFilters {
   nature?: string;
@@ -28,8 +28,43 @@ class TransactionService {
 
       return await Transaction.findAll({
         where,
-        include: [{ model: User, as: 'handler', attributes: ['id', 'name', 'email'] }],
-        order: [['date', 'DESC']],
+        include: [
+          { model: User, as: 'handler', attributes: ['id', 'name', 'email'] },
+          {
+            model: Contribution,
+            required: false,
+            include: [{
+              model: ChitFundEnrollment,
+              required: false,
+              include: [{ model: Member, attributes: ['id', 'name'], required: false }],
+            }],
+          },
+          {
+            model: Auction,
+            required: false,
+            include: [{
+              model: ChitFundEnrollment,
+              as: 'winner',
+              required: false,
+              include: [{ model: Member, attributes: ['id', 'name'], required: false }],
+            }],
+          },
+          {
+            model: Repayment,
+            required: false,
+            include: [{
+              model: Loan,
+              required: false,
+              include: [{ model: Member, attributes: ['id', 'name'], required: false }],
+            }],
+          },
+          {
+            model: Loan,
+            required: false,
+            include: [{ model: Member, attributes: ['id', 'name'], required: false }],
+          },
+        ],
+        order: [['date', 'DESC'], ['createdAt', 'DESC']],
       });
     } catch (error) {
       console.error('Error fetching transactions:', error);
