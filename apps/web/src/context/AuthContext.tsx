@@ -15,8 +15,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the Vite proxy for API calls
-  axios.defaults.baseURL = '/api';
+  // Use the Vite environment variable if available, otherwise fallback to /api (for Docker/Nginx/Proxy)
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL || '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
