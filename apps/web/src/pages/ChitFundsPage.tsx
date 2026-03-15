@@ -101,7 +101,6 @@ const ChitFundsPage = () => {
       ),
     },
     { header: 'Total Amount', accessor: (row) => <span className="font-semibold text-slate-700">{fmt(row.totalAmount)}</span> },
-    { header: 'Monthly (₹)', accessor: (row) => fmt(row.monthlyContribution) },
     {
       header: 'Progress',
       accessor: (row) => (

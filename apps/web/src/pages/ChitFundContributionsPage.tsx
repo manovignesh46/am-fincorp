@@ -96,7 +96,7 @@ const ChitFundContributionsPage = () => {
   const monthContribs = contributions.filter((c) => c.month === selectedMonth);
   const paidEnrollmentIds = new Set(monthContribs.map((c) => c.enrollmentId));
   const schedEntry = schedule.find((s) => s.month === selectedMonth);
-  const expectedPerMember = schedEntry?.contributionAmount ?? fund.monthlyContribution;
+  const expectedPerMember = schedEntry?.contributionAmount ?? fund.ChitFundTemplate?.monthlyContribution ?? 0;
   const expectedTotal = expectedPerMember * totalMembers;
   const collectedTotal = monthContribs.reduce((s, c) => s + c.amount, 0);
   const fullyCollected = totalMembers > 0 && monthContribs.length >= totalMembers;
@@ -172,10 +172,7 @@ const ChitFundContributionsPage = () => {
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Month {selectedMonth} of {fund.duration}&nbsp;&nbsp;|&nbsp;&nbsp;
-            {schedEntry
-              ? `Monthly Contribution: ${fmt(expectedPerMember)}`
-              : `Monthly Contribution: ${fmt(fund.monthlyContribution)}`
-            }
+            {`Monthly Contribution: ${fmt(expectedPerMember)}`}
           </p>
         </div>
         <button
@@ -203,7 +200,7 @@ const ChitFundContributionsPage = () => {
               {months.map((m) => {
                 const mc = contributions.filter((c) => c.month === m);
                 const sc = schedule.find((s) => s.month === m);
-                const exp = (sc?.contributionAmount ?? fund.monthlyContribution) * totalMembers;
+                const exp = (sc?.contributionAmount ?? fund.ChitFundTemplate?.monthlyContribution ?? 0) * totalMembers;
                 const full = totalMembers > 0 && mc.length >= totalMembers;
                 const partial = mc.length > 0 && !full;
                 return (

@@ -61,7 +61,7 @@ const ContributionsOverview = ({ fund, chitFundId, enrollments, contributions, l
           {months.map((m) => {
             const paid = contribByMonth[m] ?? [];
             const schedEntry = schedule.find((s) => s.month === m);
-            const expectedPerMember = schedEntry?.contributionAmount ?? fund.monthlyContribution;
+            const expectedPerMember = schedEntry?.contributionAmount ?? fund.ChitFundTemplate?.monthlyContribution ?? 0;
             const expectedTotal = totalMembers > 0 ? expectedPerMember * totalMembers : 0;
             const collectedTotal = paid.reduce((sum, c) => sum + c.amount, 0);
             const pendingMembers = totalMembers - paid.length;

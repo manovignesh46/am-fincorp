@@ -4,6 +4,7 @@ import axios from 'axios';
 import {
   ArrowLeft, Loader2, AlertCircle,
   ArrowLeftRight, Calendar, Tag, User, StickyNote, Lock,
+  Coins, Hash, CalendarClock, Link2, Building2,
 } from 'lucide-react';
 import { Transaction, TransactionNature, TransactionCategory } from '../types';
 
@@ -97,6 +98,33 @@ const TransactionDetailPage = () => {
 
   const isCredit = tx.nature === 'CREDIT';
 
+  // Resolve member & chit fund across all transaction types
+  const memberName =
+    tx.Contribution?.ChitFundEnrollment?.Member?.name ??
+    tx.Auction?.winner?.Member?.name ??
+    tx.Repayment?.Loan?.Member?.name ??
+    tx.Loan?.Member?.name ??
+    tx.resolvedMember?.name ??
+    null;
+
+  const chitFundName =
+    tx.Contribution?.ChitFundEnrollment?.ChitFund?.name ??
+    tx.Auction?.winner?.ChitFund?.name ??
+    tx.resolvedChitFund?.name ??
+    null;
+
+  const chitFundId =
+    tx.Contribution?.ChitFundEnrollment?.ChitFund?.id ??
+    tx.Auction?.winner?.ChitFund?.id ??
+    tx.resolvedChitFund?.id ??
+    null;
+
+  const contribMonth = tx.Contribution?.month ?? tx.resolvedContribution?.month ?? null;
+  const contribPaidDate = tx.Contribution?.paidDate ?? tx.resolvedContribution?.paidDate ?? null;
+  const auctionMonth = tx.Auction?.month ?? null;
+
+  const hasContext = !!(memberName || chitFundName || contribMonth !== null || auctionMonth !== null);
+
   return (
     <div className="max-w-2xl">
       {/* Header */}
@@ -111,7 +139,6 @@ const TransactionDetailPage = () => {
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Transaction Ledger</p>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Transaction #{tx.id}</h1>
         </div>
-        {/* Immutable - no Edit/Delete on transactions */}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
           <Lock size={13} className="text-slate-400" />
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Immutable Record</span>
@@ -146,30 +173,102 @@ const TransactionDetailPage = () => {
         </span>
       </div>
 
+      {/* Context card — member / chit fund / contribution details */}
+      {hasContext && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-4">
+          <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Context</p>
+          <div className="divide-y divide-indigo-100">
+            {memberName && (
+              <div className="flex items-center gap-3 py-2.5">
+                <User size={15} className="text-indigo-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Member</p>
+                  <p className="text-sm font-semibold text-indigo-900">{memberName}</p>
+                </div>
+              </div>
+            )}
+            {chitFundName && (
+              <div className="flex items-center gap-3 py-2.5">
+                <Building2 size={15} className="text-indigo-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Chit Fund</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-indigo-900">{chitFundName}</p>
+                    {chitFundId && (
+                      <button
+                        onClick={() => navigate(`/chit-funds/${chitFundId}`)}
+                        className="text-xs text-indigo-500 hover:text-indigo-700 underline font-medium"
+                      >
+                        View →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {contribMonth !== null && (
+              <div className="flex items-center gap-3 py-2.5">
+                <Hash size={15} className="text-indigo-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Contribution Month</p>
+                  <p className="text-sm font-semibold text-indigo-900">Month {contribMonth}</p>
+                </div>
+              </div>
+            )}
+            {contribPaidDate && (
+              <div className="flex items-center gap-3 py-2.5">
+                <CalendarClock size={15} className="text-indigo-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Paid Date</p>
+                  <p className="text-sm font-semibold text-indigo-900">
+                    {new Date(contribPaidDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+            )}
+            {auctionMonth !== null && (
+              <div className="flex items-center gap-3 py-2.5">
+                <Hash size={15} className="text-indigo-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Auction Month</p>
+                  <p className="text-sm font-semibold text-indigo-900">Month {auctionMonth}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Detail card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <InfoRow
-          icon={Tag}
-          label="Category"
-          value={CATEGORY_LABELS[tx.category] || tx.category}
-        />
+        <InfoRow icon={Tag} label="Category" value={CATEGORY_LABELS[tx.category] || tx.category} />
+        <InfoRow icon={Coins} label="Amount" value={fmt(tx.amount)} />
         <InfoRow
           icon={Calendar}
           label="Date"
-          value={new Date(tx.date).toLocaleDateString('en-IN', {
-            day: '2-digit', month: 'long', year: 'numeric',
-          })}
+          value={new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
         />
         <InfoRow icon={User} label="Recorded By" value={tx.handler?.name || '—'} />
         <InfoRow icon={StickyNote} label="Note" value={tx.note} />
+        {tx.referenceTransactionId && (
+          <InfoRow
+            icon={Link2}
+            label="References Transaction"
+            value={
+              <button
+                onClick={() => navigate(`/transactions/${tx.referenceTransactionId}`)}
+                className="text-indigo-600 hover:text-indigo-800 underline font-semibold"
+              >
+                #{tx.referenceTransactionId}
+              </button>
+            }
+          />
+        )}
         {tx.transferGroupId && (
           <InfoRow icon={ArrowLeftRight} label="Transfer Group ID" value={tx.transferGroupId} />
         )}
-        {tx.referenceTransactionId && (
-          <InfoRow icon={Tag} label="References Transaction" value={`#${tx.referenceTransactionId}`} />
-        )}
         <InfoRow
-          icon={Calendar}
+          icon={CalendarClock}
           label="Recorded At"
           value={new Date(tx.createdAt).toLocaleString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric',
@@ -182,3 +281,4 @@ const TransactionDetailPage = () => {
 };
 
 export default TransactionDetailPage;
+

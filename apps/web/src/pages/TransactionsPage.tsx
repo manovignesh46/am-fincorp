@@ -34,6 +34,7 @@ const getMember = (row: Transaction): string | null =>
   row.Auction?.winner?.Member?.name ??
   row.Repayment?.Loan?.Member?.name ??
   row.Loan?.Member?.name ??
+  row.resolvedMember?.name ??
   null;
 
 interface SummaryCardProps {
@@ -132,13 +133,14 @@ const TransactionsPage = () => {
       header: 'Date & Time',
       accessor: (row) => {
         const d = new Date(row.date);
+        const t = new Date(row.createdAt);
         return (
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-slate-800">
               {d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </span>
             <span className="text-xs text-slate-400">
-              {d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+              {t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
             </span>
           </div>
         );

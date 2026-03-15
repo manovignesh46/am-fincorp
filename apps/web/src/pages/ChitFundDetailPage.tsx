@@ -152,7 +152,7 @@ const ChitFundDetailPage = () => {
     setAddMemberError(null);
     try {
       setMembersLoading(true);
-      const res = await axios.get<{ data: Member[] }>('/members');
+      const res = await axios.get<{ data: Member[] }>('/members', { params: { limit: 1000 } });
       setAllMembers(res.data.data);
     } catch {
       // ignore
@@ -224,7 +224,7 @@ const ChitFundDetailPage = () => {
     const entry = schedule.find((s) => s.month === monthNum);
     setContribEnrollmentId('');
     setContribMonth(String(monthNum));
-    setContribAmount(String(entry?.contributionAmount ?? currentFund.monthlyContribution));
+    setContribAmount(String(entry?.contributionAmount ?? currentFund.ChitFundTemplate?.monthlyContribution ?? 0));
     setContribPaidDate(new Date().toISOString().split('T')[0]);
     setContribNote('');
     setContribError(null);
@@ -406,6 +406,11 @@ const ChitFundDetailPage = () => {
               const cashOutflow = auctions.reduce((sum, a) => sum + a.payoutAmount, 0);
               const totalProfit = cashInflow - cashOutflow;
 
+              const tplSchedule = fund.ChitFundTemplate?.monthlySchedule ?? [];
+              const avgContrib = tplSchedule.length > 0
+                ? Math.round(tplSchedule.reduce((s, e) => s + e.contributionAmount, 0) / tplSchedule.length)
+                : fund.ChitFundTemplate?.monthlyContribution ?? 0;
+
               // Next auction date: find lowest future month that has no auction yet
               const auctionedMonths = new Set(auctions.map((a) => a.auctionMonth));
               const now = new Date();
@@ -429,7 +434,7 @@ const ChitFundDetailPage = () => {
                   {/* 2-per-row grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100 sm:divide-y-0">
                     <InfoRow icon={TrendingUp} label="Total Amount" value={fmt(fund.totalAmount)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
-                    <InfoRow icon={Coins} label="Monthly Contribution" value={fmt(fund.monthlyContribution)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
+                    <InfoRow icon={Coins} label="Avg Monthly Contribution" value={fmt(avgContrib)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
                     <InfoRow icon={Hash} label="Duration" value={`${fund.duration} months`} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
                     <InfoRow icon={Activity} label="Current Month" value={`Month ${fund.currentMonth}`} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pl-4 sm:border-l sm:border-l-slate-100`} />
                     <InfoRow icon={Calendar} label="Start Date" value={fmtDate(startDate)} className={`${rowCls} sm:border-b sm:border-slate-100 sm:pr-4`} />
@@ -617,7 +622,7 @@ const ChitFundDetailPage = () => {
                 setContribEnrollmentId('');
                 const schedule = fund.ChitFundTemplate?.monthlySchedule ?? [];
                 const entry = schedule.find((s) => s.month === m);
-                setContribAmount(String(entry?.contributionAmount ?? fund.monthlyContribution));
+                setContribAmount(String(entry?.contributionAmount ?? fund.ChitFundTemplate?.monthlyContribution ?? 0));
               }}
               className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-blue-600 focus:border-blue-600 focus:bg-white outline-none transition-all font-medium text-slate-900 sm:text-sm"
             >

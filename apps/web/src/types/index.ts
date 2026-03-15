@@ -43,13 +43,12 @@ export interface ChitFund {
   name: string;
   description?: string | null;
   totalAmount: number;
-  monthlyContribution: number;
   duration: number;
   currentMonth: number;
   startDate: string;
   status: ChitFundStatus;
   templateId?: number | null;
-  ChitFundTemplate?: Pick<ChitFundTemplate, 'id' | 'name' | 'monthlySchedule'>;
+  ChitFundTemplate?: Pick<ChitFundTemplate, 'id' | 'name' | 'monthlySchedule' | 'monthlyContribution'>;
   createdAt: string;
 }
 
@@ -132,15 +131,28 @@ export interface Transaction {
   createdAt: string;
   // Nested member resolution paths
   Contribution?: {
-    ChitFundEnrollment?: { Member?: { id: number; name: string } };
+    month?: number;
+    amount?: number;
+    paidDate?: string;
+    ChitFundEnrollment?: {
+      Member?: { id: number; name: string };
+      ChitFund?: { id: number; name: string };
+    };
   };
   Auction?: {
-    winner?: { Member?: { id: number; name: string } };
+    month?: number;
+    winner?: {
+      Member?: { id: number; name: string };
+      ChitFund?: { id: number; name: string };
+    };
   };
   Repayment?: {
     Loan?: { Member?: { id: number; name: string } };
   };
   Loan?: { Member?: { id: number; name: string } };
+  resolvedMember?: { id: number; name: string };
+  resolvedChitFund?: { id: number; name: string };
+  resolvedContribution?: { month: number; amount: number; paidDate: string };
 }
 
 export interface TransactionSummary {

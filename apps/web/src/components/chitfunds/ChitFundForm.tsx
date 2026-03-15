@@ -10,7 +10,6 @@ interface ChitFundFormData {
   description: string;
   templateId: string;
   totalAmount: string;
-  monthlyContribution: string;
   duration: string;
   startDate: string;
   status: ChitFundStatus;
@@ -29,7 +28,6 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
     description: initialData?.description || '',
     templateId: initialData?.templateId ? String(initialData.templateId) : '',
     totalAmount: initialData?.totalAmount ? String(initialData.totalAmount) : '',
-    monthlyContribution: initialData?.monthlyContribution ? String(initialData.monthlyContribution) : '',
     duration: initialData?.duration ? String(initialData.duration) : '',
     startDate: initialData?.startDate ? initialData.startDate.slice(0, 10) : '',
     status: initialData?.status || 'ACTIVE',
@@ -53,7 +51,6 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
         ...prev,
         templateId: id,
         totalAmount: String(tpl.totalAmount),
-        monthlyContribution: String(tpl.monthlyContribution),
         duration: String(tpl.durationMonths),
       }));
     }
@@ -69,7 +66,6 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
     onSubmit({
       ...formData,
       totalAmount: parseFloat(formData.totalAmount),
-      monthlyContribution: parseFloat(formData.monthlyContribution),
       duration: parseInt(formData.duration, 10),
       currentMonth: 1,
       description: formData.description || null,
@@ -94,11 +90,24 @@ const ChitFundForm = ({ onSubmit, initialData = null, isLoading = false }: ChitF
           onChange={handleTemplateSelect}
         >
           <option value="">— Select a template —</option>
-          {templates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({t.durationMonths} months · ₹{Number(t.monthlyContribution).toLocaleString('en-IN')}/mo)
-            </option>
-          ))}
+          {templates.map((t) => {
+            // Use monthlyContribution if set; otherwise average the monthlySchedule
+            const contrib = t.monthlyContribution
+              ?? (t.monthlySchedule && t.monthlySchedule.length > 0
+                ? Math.round(
+                    t.monthlySchedule.reduce((sum, s) => sum + s.contributionAmount, 0) /
+                    t.monthlySchedule.length
+                  )
+                : null);
+            const contribLabel = contrib != null
+              ? `₹${Number(contrib).toLocaleString('en-IN')}/mo`
+              : `${t.durationMonths} months`;
+            return (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.durationMonths} months · {contribLabel})
+              </option>
+            );
+          })}
         </select>
       </div>
 
