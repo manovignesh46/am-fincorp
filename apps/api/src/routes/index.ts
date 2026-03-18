@@ -5,6 +5,7 @@ import memberRoutes from './memberRoutes';
 import chitFundRoutes from './chitFundRoutes';
 import chitFundTemplateRoutes from './chitFundTemplateRoutes';
 import transactionRoutes from './transactionRoutes';
+import userRoutes from './userRoutes';
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use('/members', memberRoutes);
 router.use('/chit-funds', chitFundRoutes);
 router.use('/chit-fund-templates', chitFundTemplateRoutes);
 router.use('/transactions', transactionRoutes);
+router.use('/users', userRoutes);
 
 export default router;

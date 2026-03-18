@@ -1,4 +1,6 @@
+import { randomUUID } from 'crypto';
 import { Op } from '@am-fincorp/database';
+
 import { Transaction, User, Contribution, ChitFundEnrollment, ChitFund, Member, Auction, Loan, Repayment } from '@am-fincorp/database';
 
 interface TransactionFilters {
@@ -132,12 +134,56 @@ class TransactionService {
       if (!data.amount || Number(data.amount) <= 0) {
         throw new Error('Amount must be greater than 0');
       }
+
+      // ── P2P double-entry path ────────────────────────────────────────────────
+      if (data.category === 'PARTNER_TO_PARTNER') {
+        const toUserId = Number(data.toUserId);
+        if (!toUserId || isNaN(toUserId)) {
+          throw new Error('toUserId is required for Partner to Partner transfers');
+        }
+        if (toUserId === userId) {
+          throw new Error('Cannot transfer to yourself');
+        }
+
+        // Verify recipient exists
+        const recipient = await (User as any).findByPk(toUserId, { attributes: ['id', 'name'] });
+        if (!recipient) throw new Error('Recipient partner not found');
+
+        const transferGroupId = randomUUID();
+        const { amount, date, note } = data;
+
+        const [debitTx, creditTx] = await (Transaction as any).bulkCreate([
+          {
+            nature: 'DEBIT',
+            category: 'PARTNER_TO_PARTNER',
+            amount: Number(amount),
+            date,
+            note: note || null,
+            userId,          // sender is debited
+            transferGroupId,
+          },
+          {
+            nature: 'CREDIT',
+            category: 'PARTNER_TO_PARTNER',
+            amount: Number(amount),
+            date,
+            note: note || null,
+            userId: toUserId, // receiver is credited
+            transferGroupId,
+          },
+        ]);
+
+        return { debit: debitTx, credit: creditTx };
+      }
+
+      // ── Standard single-entry path ───────────────────────────────────────────
       return await Transaction.create({ ...data, userId });
     } catch (error) {
       console.error('Error creating transaction:', error);
       throw new Error((error as Error).message);
     }
   }
+
 
   async getSummary(): Promise<TransactionSummary> {
     try {
